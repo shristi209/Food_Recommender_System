@@ -7,7 +7,7 @@ import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const Accordion = AccordionPrimitive.Root;
-//git accordion bla bla
+//git accordion bla bla bla
 const AccordionItem = React.forwardRef<
   React.ElementRef<typeof AccordionPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Item>
