@@ -1,124 +1,115 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {getDbPool} from '@/lib/database';
+import { getDbPool } from '@/lib/database';
 import * as bcrypt from 'bcryptjs';
-
-interface RestaurantRegistration {
-    role: 'restaurant';
-    restaurantName: string;
-    email: string;
-    phone: string;
-    address: string;
-    password: string;
-    panNumber: string;
-}
+import jwt from 'jsonwebtoken';
 
 export async function POST(req: NextRequest) {
-    try {
-        const body = await req.json();
+  const pool = await getDbPool();
+  
+  try {
+    const { email, password } = await req.json();
 
-        if (!body.role || !body.email || !body.password) {
-            return NextResponse.json({ 
-                message: 'Missing required fields' 
-            }, { status: 400 })
-        }
-
-        // Connect to the database
-        const pool = await getDbPool();
-        const sql = pool.request();
-
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(body.password, salt);
-
-        if (body.role === 'customer') {
-
-            
-            const checkEmailQuery = `
-                SELECT * FROM Users 
-                WHERE email = @email AND role = 'customer'
-            `;
-            
-            const checkResult = await sql.query(checkEmailQuery, { 
-                email: body.email 
-            });
-
-            if (checkResult.recordset.length > 0) {
-                return NextResponse.json({ 
-                    message: 'Email already registered' 
-                }, { status: 409 });
-            }
-
-            // Insert customer
-            const insertQuery = `
-                INSERT INTO Users 
-                (name, email, passwordHash, role, createdAt) 
-                VALUES 
-                (@name, @email, @passwordHash, 'customer', GETDATE())
-            `;
-
-            await sql.query(insertQuery, {
-                name: customer.name,
-                email: customer.email,
-                PasswordHash: hashedPassword
-            });
-
-            return NextResponse.json({ 
-                message: 'Customer registered successfully' 
-            }, { status: 201 });
-
-        } else if (body.role === 'RESTAURANT') {
-            // Restaurant registration
-            const restaurant = body as RestaurantRegistration;
-            
-            // Check if email already exists
-            const checkEmailQuery = `
-                SELECT * FROM Users 
-                WHERE Email = @Email AND UserRole = 'RESTAURANT'
-            `;
-            
-            const checkResult = await sql.query(checkEmailQuery, { 
-                Email: restaurant.email 
-            });
-
-            if (checkResult.recordset.length > 0) {
-                return NextResponse.json({ 
-                    message: 'Restaurant email already registered' 
-                }, { status: 409 });
-            }
-
-            // Insert restaurant
-            const insertQuery = `
-                INSERT INTO Users 
-                (name, email, passwordHash, role, phone, address, panNumber, createdAt) 
-                VALUES 
-                (@name, @email, @passwordHash, 'RESTAURANT', @phone, @address, @panNumber, GETDATE())
-            `;
-
-            await sql.query(insertQuery, {
-                name: restaurant.restaurantName,
-                email: restaurant.email,
-                passwordHash: hashedPassword,
-                phone: restaurant.phone,
-                address: restaurant.address,
-                panNumber: restaurant.panNumber
-            });
-
-            return NextResponse.json({ 
-                message: 'Restaurant registered successfully' 
-            }, { status: 201 });
-        }
-
-        return NextResponse.json({ 
-            message: 'Invalid registration type' 
-        }, { status: 400 });
-
-    } catch (error) {
-        console.error('Registration error:', error);
-        return NextResponse.json({ 
-            message: 'Internal server error', 
-            error: error.message 
-        }, { status: 500 });
-    } finally {
-        // Close the database connection
-        await sql.close();
+    // Validate input
+    if (!email || typeof email !== 'string' || !password || typeof password !== 'string') {
+      return NextResponse.json({ 
+        message: 'Invalid input: Email and password are required' 
+      }, { status: 400 });
     }
+
+    // Check if the email exists in the database
+    const [userResults] = await pool.execute(
+      'SELECT * FROM Users WHERE email = ?', 
+      [email]
+    );
+
+    const users = userResults as any[];
+
+    if (users.length === 0) {
+      return NextResponse.json({ 
+        message: 'User not found' 
+      }, { status: 404 });
+    }
+
+    const user = users[0];
+
+    // Compare the password
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) {
+      return NextResponse.json({ 
+        message: 'Invalid credentials' 
+      }, { status: 401 });
+    }
+
+    // Specific handling for restaurant login
+    if (user.role === 'restaurant') {
+      // Additional checks only for restaurant users
+      if (!user.userId) {
+        return NextResponse.json({
+          message: 'Invalid restaurant user'
+        }, { status: 500 });
+      }
+
+      const [restaurantResults] = await pool.execute(
+        'SELECT * FROM Restaurants WHERE userId = ? AND status = ?', 
+        [user.userId, 'approved']
+      );
+
+      const restaurants = restaurantResults as any[];
+
+      if (restaurants.length === 0) {
+        return NextResponse.json({
+          message: 'Restaurant not approved or not found'
+        }, { status: 403 });
+      }
+    }
+
+    if (!process.env.NEXT_PUBLIC_JWT_SECRET_KEY) {
+      throw new Error('JWT_SECRET_KEY is not defined');
+    }
+
+    const token = jwt.sign(
+      { 
+        userId: user.userId, 
+        email: user.email, 
+        role: user.role,
+        name: user.name || user.restaurantName || ''
+      },
+      process.env.NEXT_PUBLIC_JWT_SECRET_KEY,
+      { 
+        expiresIn: '1h',  // 1 hour expiration
+        algorithm: 'HS256' 
+      }
+    );
+
+    // Create response with explicit cookie setting
+    const response = NextResponse.json({
+      message: 'Login successful',
+      user: {
+        user_id: user.userId,
+        email: user.email,
+        role: user.role,
+        name: user.name || user.restaurantName || ''
+      }
+    }, { status: 200 });
+
+    // Explicitly set cookie with more robust configuration
+    response.cookies.set({
+      name: 'auth_token',
+      value: token,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 3600, // 1 hour in seconds
+      path: '/' // Ensure cookie is available across the site
+    });
+
+    return response;
+
+  } catch (error) {
+    console.error('Login error:', error);
+    return NextResponse.json({ 
+      message: 'Internal server error', 
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
+  }
 }
