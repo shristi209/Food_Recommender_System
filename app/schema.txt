@@ -1,0 +1,21 @@
+CREATE TABLE users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  password VARCHAR(255) NOT NULL,
+  role ENUM('customer', 'restaurant', 'admin') NOT NULL,
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE restaurants (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  userId INT NOT NULL,
+  restaurantName VARCHAR(255) NOT NULL,
+  phone VARCHAR(255) NOT NULL,
+  address TEXT NOT NULL,
+  panNumber VARCHAR(255),
+  registrationCertificate VARCHAR(255),
+  panImage VARCHAR(255),
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
+);
