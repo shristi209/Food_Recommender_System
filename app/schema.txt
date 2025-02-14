@@ -19,3 +19,13 @@ CREATE TABLE restaurants (
   createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
 );
+
+
+Database_Host=localhost
+Database_User="root"
+Database_Password=
+Database_Name=food_recommender_system
+DB_PORT=3306
+PORT=3000
+
+NEXT_PUBLIC_JWT_SECRET_KEY = f5KvflLN6z
