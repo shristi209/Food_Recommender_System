@@ -60,34 +60,26 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const response = await axios.post('/api/auth/login', {
-        email,
-        password
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
       });
 
-      // Get token from response
-      const { token, user } = response.data;
+      const data = await response.json();
 
-      // Set token in cookie
-      document.cookie = `auth_token=${token}; path=/; max-age=604800; secure; samesite=strict`;
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed');
+      }
 
-      // Handle successful login
+      // Show success message
       toast.success('Login successful');
       
-      // Redirect based on user role
-      switch (user.role) {
-        case 'admin':
-          router.push('/dashboard/admin');
-          break;
-        case 'restaurant':
-          router.push('/dashboard/restaurant');
-          break;
-        case 'customer':
-          router.push('/orders');
-          break;
-        default:
-          router.push('/');
-      }
+      // Always redirect to home page
+      router.push('/');
+      window.location.reload();
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const errorResponse = error.response?.data;

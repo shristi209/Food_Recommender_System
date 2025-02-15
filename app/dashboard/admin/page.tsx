@@ -50,7 +50,6 @@ export default function AdminDashboard() {
     },
   ]);
 
-  const {  logout } = useAuth();
 
   return (
     <div className="container mx-auto p-4 md:p-6 lg:p-8">
@@ -93,7 +92,6 @@ export default function AdminDashboard() {
             </div>
           </div>
         ))}
-        <Button onClick={logout}>Logout</Button>
       </div>
 
       {/* Recent Activity */}

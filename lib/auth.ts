@@ -28,23 +28,3 @@ export function verifyRole(decoded: DecodedToken, allowedRoles: UserRole[]) {
     throw new Error('Unauthorized access');
   }
 }
-
-// Example usage in API route:
-/*
-import { verifyAuth, verifyRole } from '@/lib/auth';
-
-export async function GET(request: NextRequest) {
-  try {
-    const decoded = verifyAuth(request);
-    verifyRole(decoded, ['admin', 'restaurant']);
-    
-    // Your API logic here
-    
-  } catch (error) {
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 401 }
-    );
-  }
-}
-*/

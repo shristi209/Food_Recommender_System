@@ -7,8 +7,6 @@ import {
   UserIcon,
   StarIcon
 } from '@heroicons/react/24/outline';
-import { useAuth } from '@/contexts/auth-context';
-import { Button } from '@/components/ui/button';
 
 interface StatsCard {
   name: string;
@@ -85,7 +83,6 @@ export default function RestaurantDashboard() {
       time: '25 mins ago',
     },
   ]);
-  const {  logout } = useAuth();
 
   return (
     <div>
@@ -174,7 +171,6 @@ export default function RestaurantDashboard() {
           </ul>
         </div>
       </div>
-      <Button onClick={logout}>Logout</Button>
     </div>
   );
 }

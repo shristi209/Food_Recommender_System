@@ -25,7 +25,7 @@ export default function Profile() {
     id: '1',
     name: 'John Doe',
     email: 'john@example.com',
-    role: 'CUSTOMER',
+    role: 'customer',
     allergies: ['Peanuts', 'Shellfish'],
     address: '123 Main St',
     phone: '+1234567890',

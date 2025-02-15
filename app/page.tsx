@@ -11,13 +11,17 @@ import {
   SheetFooter,
 } from '@/components/ui/sheet';
 import { Utensils, ShoppingCart, User, Plus, Minus } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { CartItem } from './types';
 import { useAuth } from '@/contexts/auth-context';
+// import { useRouter } from 'next/navigation';
 
 export default function Home() {
   const { isAuthenticated, user, logout } = useAuth();
+
+  console.log("user...", user);
+  console.log("isAuthenticated...", isAuthenticated);
 
   const [restaurants] = useState([
     {
@@ -70,6 +74,15 @@ export default function Home() {
 
   const cartTotal = cart.reduce((total, item) => total + item.price * item.quantity, 0);
 
+  function handleDashboard(e: any): void {
+    e.preventDefault();
+    if (isAuthenticated && user?.role === 'restaurant') {
+    window.location.href = '/dashboard/restaurant';
+  }
+  if (isAuthenticated && user?.role === 'admin') {
+    window.location.href = '/dashboard/admin';
+  }
+}
 
   return (
     <div className="min-h-screen bg-background">
@@ -155,21 +168,16 @@ export default function Home() {
             </Sheet>
             {isAuthenticated ? (
               <>
-                {user?.role === 'admin' ? (
-                  <Button asChild>
-                    <Link href="/dashboard/admin">Dashboard</Link>
+                <Button variant="ghost" size="icon" asChild>
+                  <Link href="/profile">
+                    <User className="h-5 w-5" />
+                  </Link>
+                </Button>
+                {user?.role === 'restaurant' || user?.role === 'admin'? (
+                  <Button variant="outline" onClick={handleDashboard}>
+                    Dashboard
                   </Button>
-                ) : user?.role === 'restaurant' ? (
-                  <Button asChild>
-                    <Link href="/dashboard/restaurant">Dashboard</Link>
-                  </Button>
-                ) : (
-                  <Button variant="ghost" size="icon" asChild>
-                    <Link href="/profile">
-                      <User className="h-5 w-5" />
-                    </Link>
-                  </Button>
-                )}
+                ) : null}
                 <Button variant="outline" onClick={logout}>
                   Logout
                 </Button>

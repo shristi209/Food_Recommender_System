@@ -118,7 +118,7 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
                   </Link>
                 );
               })}
-              <Button onClick={logout}>Logout</Button>
+              {/* <Button onClick={logout}>Logout</Button> */}
             </div>
           </nav>
         </div>

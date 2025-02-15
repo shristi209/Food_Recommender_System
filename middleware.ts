@@ -3,6 +3,13 @@ import type { NextRequest } from 'next/server';
 import { UserRole } from '@/types/auth';
 import jwt from 'jsonwebtoken';
 
+interface JWTPayload {
+  id: string;
+  email: string;
+  role: UserRole;
+  name: string;
+}
+
 // Define protected routes and their allowed roles
 const protectedRoutes = {
   '/dashboard/admin': ['admin'],
@@ -20,7 +27,7 @@ export async function middleware(request: NextRequest) {
   
   // Get role from cookies
   const token = request.cookies.get('auth_token')?.value;
-  const decoded = token ? jwt.decode(token) : null;
+  const decoded = token ? jwt.decode(token) as JWTPayload | null : null;
   const role = decoded?.role;
   
   // If no role and trying to access protected route, redirect to login
@@ -39,7 +46,7 @@ export async function middleware(request: NextRequest) {
   for (const [route, allowedRoles] of Object.entries(protectedRoutes)) {
     if (pathname.startsWith(route)) {
       // Check if user's role is allowed
-      if (!role || !allowedRoles.includes(role as UserRole)) {
+      if (!role || !allowedRoles.includes(role)) {
         console.log('Access denied. User role:', role, 'Required roles:', allowedRoles);
         // Redirect to 403 page or home page
         return NextResponse.redirect(new URL('/403', request.url));
