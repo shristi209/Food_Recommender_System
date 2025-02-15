@@ -2,10 +2,10 @@ import { NextRequest } from 'next/server';
 import { getDbPool } from './database';
 import { verifyAuth, verifyRole } from './auth';
 
-interface RestaurantInfo {
+export interface RestaurantInfo {
   id: string;
   userId: string;
-  name: string;
+  restaurantName: string;
 }
 
 export async function getRestaurantFromRequest(request: NextRequest): Promise<RestaurantInfo> {
@@ -18,7 +18,7 @@ export async function getRestaurantFromRequest(request: NextRequest): Promise<Re
     
     // Get restaurant info from user ID
     const [restaurantResults] = await pool.execute(
-      'SELECT id, userId, name FROM Restaurants WHERE userId = ?',
+      'SELECT id, userId, restaurantName FROM restaurants WHERE userId = ?',
       [decoded.id]
     );
     const restaurants = restaurantResults as any[];

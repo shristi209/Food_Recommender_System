@@ -15,7 +15,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { CartItem } from './types';
 import { useAuth } from '@/contexts/auth-context';
-// import { useRouter } from 'next/navigation';
+import { ThemeToggle } from './components/theme-toggle';
 
 export default function Home() {
   const { isAuthenticated, user, logout } = useAuth();
@@ -77,22 +77,23 @@ export default function Home() {
   function handleDashboard(e: any): void {
     e.preventDefault();
     if (isAuthenticated && user?.role === 'restaurant') {
-    window.location.href = '/dashboard/restaurant';
+      window.location.href = '/dashboard/restaurant';
+    }
+    if (isAuthenticated && user?.role === 'admin') {
+      window.location.href = '/dashboard/admin';
+    }
   }
-  if (isAuthenticated && user?.role === 'admin') {
-    window.location.href = '/dashboard/admin';
-  }
-}
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b">
+    <div className="min-h-screen bg-background dark:bg-gray-900">
+      <header className="border-b border-gray-200 dark:border-gray-800">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Utensils className="h-6 w-6" />
-            <span className="text-xl font-bold">FoodHub</span>
+            <Utensils className="h-6 w-6 text-gray-700 dark:text-gray-300" />
+            <span className="text-xl font-bold text-gray-900 dark:text-white">FoodHub</span>
           </div>
           <div className="flex items-center gap-4">
+            <ThemeToggle />
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative">
@@ -173,7 +174,7 @@ export default function Home() {
                     <User className="h-5 w-5" />
                   </Link>
                 </Button>
-                {user?.role === 'restaurant' || user?.role === 'admin'? (
+                {user?.role === 'restaurant' || user?.role === 'admin' ? (
                   <Button variant="outline" onClick={handleDashboard}>
                     Dashboard
                   </Button>
@@ -197,12 +198,14 @@ export default function Home() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-8">Popular Restaurants</h1>
+        <h1 className="text-3xl font-bold mb-8 text-gray-900 dark:text-white">Popular Restaurants</h1>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {restaurants.map((restaurant) => (
-            <Card key={restaurant.id}>
+            <Card key={restaurant.id} className="bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-shadow">
               <CardHeader>
-                <CardTitle>{restaurant.name}</CardTitle>
+                <CardTitle className="text-xl font-bold text-gray-900 dark:text-white">
+                  {restaurant.name}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <img
@@ -210,35 +213,44 @@ export default function Home() {
                   alt={restaurant.name}
                   className="w-full h-48 object-cover rounded-md mb-4"
                 />
-                <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
-                  <span>⭐ {restaurant.rating}</span>
-                  <span>{restaurant.cuisine}</span>
-                </div>
-                <div className="space-y-4">
-                  <h3 className="font-semibold">Menu Items</h3>
-                  {restaurant.menuItems.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between py-2 border-b">
-                      <div>
-                        <p className="font-medium">{item.name}</p>
-                        <p className="text-sm text-muted-foreground">{item.description}</p>
-                        <div className="flex items-center space-x-2 mt-1">
-                          {item.isVegetarian && (
-                            <span className="inline-block px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded">
-                              Vegetarian
-                            </span>
-                          )}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600 dark:text-gray-300">{restaurant.cuisine}</span>
+                    <span className="text-yellow-500">★ {restaurant.rating}</span>
+                  </div>
+                  <div className="grid gap-2">
+                    {restaurant.menuItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-medium text-gray-900 dark:text-white">
+                            {item.name}
+                          </h3>
+                          <span className="font-bold text-gray-900 dark:text-white">
+                            ${item.price}
+                          </span>
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold mb-2">${item.price}</p>
-                        <Button onClick={() => addToCart(item)} size="sm">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                          {item.description}
+                        </p>
+                        <Button
+                          onClick={() => addToCart(item)}
+                          className="w-full bg-primary hover:bg-primary/90 text-white"
+                        >
                           Add to Cart
                         </Button>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </CardContent>
+              <CardFooter className="flex justify-end">
+                <Button variant="outline" className="dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700">
+                  View Menu
+                </Button>
+              </CardFooter>
             </Card>
           ))}
         </div>

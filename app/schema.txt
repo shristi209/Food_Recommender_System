@@ -29,3 +29,161 @@ DB_PORT=3306
 PORT=3000
 
 NEXT_PUBLIC_JWT_SECRET_KEY = f5KvflLN6z
+
+
+CREATE TABLE cuisines (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(255) UNIQUE NOT NULL
+);
+
+CREATE TABLE categories (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(255) UNIQUE NOT NULL
+);
+
+
+CREATE TABLE menu_items (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    restaurantId INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    cuisineId INT NOT NULL,
+    categoryId INT NOT NULL,
+    spicyLevel INT CHECK(spicyLevel BETWEEN 0 AND 5),
+    isVeg TINYINT(1) NOT NULL,  -- Use TINYINT(1) for boolean values
+    ingredients TEXT,  -- Comma-separated ingredients
+    vector VARCHAR(255),  -- Feature vector stored as a string
+    picture VARCHAR(255),
+    price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (restaurantId) REFERENCES restaurants(id) ON DELETE CASCADE,
+    FOREIGN KEY (cuisineId) REFERENCES cuisines(id),
+    FOREIGN KEY (categoryId) REFERENCES categories(id)
+);
+
+CREATE TABLE user_interactions (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    userId INT NOT NULL,
+    menuItemId INT,
+    restaurantId INT,
+    viewDuration INT DEFAULT 0, -- Duration in seconds
+    addToCart TINYINT(1) DEFAULT 0,
+    spicyPreference INT DEFAULT 0,
+    vegPreference TINYINT(1) DEFAULT 0,
+    interactionTime DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (userId) REFERENCES users(id),
+    FOREIGN KEY (menuItemId) REFERENCES menu_items(id),
+    FOREIGN KEY (restaurantId) REFERENCES restaurants(id)
+);
+
+INSERT INTO cuisines (name)
+VALUES 
+('Momo'),          -- Nepali
+('Chowmin'),      -- Nepali
+('Pizza'),         -- Italian
+('Pasta'),         -- Italian
+('Susi'),     -- Chinese
+('Dumplings'),     -- Chinese
+('Butter Chicken'),-- Indian
+('Biryani');       -- Indian
+
+-- Insert sample menu items
+INSERT INTO menu_items (restaurantId, name, cuisineId, categoryId, spicyLevel, isVeg, ingredients, vector, picture, price)
+VALUES
+-- Nepali Dishes (Restaurant 1)
+(1, 'Chicken Momo', 1, 1, 2, 0, 'chicken, onion, garlic, ginger, spices', 
+'[1,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0]',
+'/images/menu/chicken-momo.jpg', 12.99),
+
+(1, 'Veg Momo', 1, 1, 1, 1, 'cabbage, carrot, onion, garlic, ginger', 
+'[1,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]',
+'/images/menu/veg-momo.jpg', 10.99),
+
+(1, 'Chicken Chowmein', 2, 1, 2, 0, 'noodles, chicken, vegetables, soy sauce', 
+'[0,1,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0]',
+'/images/menu/chicken-chowmein.jpg', 13.99),
+
+(1, 'Veg Chowmein', 2, 1, 1, 1, 'noodles, mixed vegetables, soy sauce', 
+'[0,1,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]',
+'/images/menu/veg-chowmein.jpg', 11.99),
+
+-- Italian Dishes (Restaurant 2)
+(2, 'Margherita Pizza', 3, 2, 0, 1, 'tomato sauce, mozzarella, basil', 
+'[0,0,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,1]',
+'/images/menu/margherita-pizza.jpg', 14.99),
+
+(2, 'Pepperoni Pizza', 3, 2, 1, 0, 'tomato sauce, mozzarella, pepperoni', 
+'[0,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0]',
+'/images/menu/pepperoni-pizza.jpg', 16.99),
+
+(2, 'Alfredo Pasta', 4, 2, 0, 1, 'pasta, cream sauce, parmesan, garlic', 
+'[0,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,0,1]',
+'/images/menu/alfredo-pasta.jpg', 15.99),
+
+(2, 'Chicken Pasta', 4, 2, 1, 0, 'pasta, chicken, tomato sauce, herbs', 
+'[0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0]',
+'/images/menu/chicken-pasta.jpg', 17.99),
+
+-- Chinese Dishes (Restaurant 3)
+(3, 'Veg Sushi Roll', 5, 3, 0, 1, 'rice, cucumber, avocado, nori', 
+'[0,0,0,0,1,0,0,0,0,0,1,0,1,0,0,0,0,0,1]',
+'/images/menu/veg-sushi.jpg', 11.99),
+
+(3, 'Tuna Sushi', 5, 3, 1, 0, 'rice, tuna, nori, wasabi', 
+'[0,0,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,0]',
+'/images/menu/tuna-sushi.jpg', 13.99),
+
+(3, 'Veg Dumplings', 6, 3, 1, 1, 'flour, vegetables, garlic, ginger', 
+'[0,0,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,0,1]',
+'/images/menu/veg-dumplings.jpg', 10.99),
+
+(3, 'Pork Dumplings', 6, 3, 2, 0, 'flour, pork, garlic, ginger, spices', 
+'[0,0,0,0,0,1,0,0,0,0,1,0,0,0,1,0,0,0,0]',
+'/images/menu/pork-dumplings.jpg', 12.99),
+
+-- Indian Dishes (Restaurant 4)
+(4, 'Butter Chicken', 7, 4, 3, 0, 'chicken, butter, cream, tomato, spices', 
+'[0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,1,0,0,0]',
+'/images/menu/butter-chicken.jpg', 16.99),
+
+(4, 'Paneer Butter Masala', 7, 4, 2, 1, 'paneer, butter, cream, tomato, spices', 
+'[0,0,0,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,1]',
+'/images/menu/paneer-butter-masala.jpg', 15.99),
+
+(4, 'Chicken Biryani', 8, 4, 4, 0, 'rice, chicken, spices, onion, yogurt', 
+'[0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,1,0,0]',
+'/images/menu/chicken-biryani.jpg', 18.99),
+
+(4, 'Veg Biryani', 8, 4, 3, 1, 'rice, mixed vegetables, spices, yogurt', 
+'[0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,1]',
+'/images/menu/veg-biryani.jpg', 16.99);
+
+-- Vector structure explanation:
+-- [
+--   // Cuisine one-hot (8 positions)
+--   1,0,0,0,0,0,0,0,  // Momo
+--   0,1,0,0,0,0,0,0,  // Chowmein
+--   0,0,1,0,0,0,0,0,  // Pizza
+--   0,0,0,1,0,0,0,0,  // Pasta
+--   0,0,0,0,1,0,0,0,  // Sushi
+--   0,0,0,0,0,1,0,0,  // Dumplings
+--   0,0,0,0,0,0,1,0,  // Butter Chicken/Masala
+--   0,0,0,0,0,0,0,1,  // Biryani
+--   
+--   // Category one-hot (4 positions)
+--   1,0,0,0,  // Nepali
+--   0,1,0,0,  // Italian
+--   0,0,1,0,  // Chinese
+--   0,0,0,1,  // Indian
+--   
+--   // Spicy level one-hot (6 positions)
+--   1,0,0,0,0,0,  // Level 0
+--   0,1,0,0,0,0,  // Level 1
+--   0,0,1,0,0,0,  // Level 2
+--   0,0,0,1,0,0,  // Level 3
+--   0,0,0,0,1,0,  // Level 4
+--   0,0,0,0,0,1,  // Level 5
+--   
+--   // Vegetarian (1 position)
+--   1  // Is vegetarian
+--   0  // Non-vegetarian
+-- ]

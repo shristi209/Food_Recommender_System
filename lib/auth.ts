@@ -16,7 +16,7 @@ export function verifyAuth(request: NextRequest) {
   }
 
   try {
-    const decoded = jwt.verify(authToken.value, process.env.JWT_SECRET!) as DecodedToken;
+    const decoded = jwt.verify(authToken.value, process.env.NEXT_PUBLIC_JWT_SECRET_KEY!) as DecodedToken;
     return decoded;
   } catch (error) {
     throw new Error('Invalid token');
