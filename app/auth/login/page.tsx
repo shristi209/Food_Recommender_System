@@ -65,11 +65,29 @@ export default function Login() {
         password
       });
 
+      // Get token from response
+      const { token, user } = response.data;
+
+      // Set token in cookie
+      document.cookie = `auth_token=${token}; path=/; max-age=604800; secure; samesite=strict`;
+
       // Handle successful login
       toast.success('Login successful');
       
       // Redirect based on user role
-      router.push('/');
+      switch (user.role) {
+        case 'admin':
+          router.push('/dashboard/admin');
+          break;
+        case 'restaurant':
+          router.push('/dashboard/restaurant');
+          break;
+        case 'customer':
+          router.push('/orders');
+          break;
+        default:
+          router.push('/');
+      }
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const errorResponse = error.response?.data;

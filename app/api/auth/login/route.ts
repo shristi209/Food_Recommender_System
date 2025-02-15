@@ -40,10 +40,15 @@ export async function POST(req: NextRequest) {
       }, { status: 401 });
     }
 
+    // Specific handling for admin login
+    if (user.role === 'admin') {
+      // No additional checks needed for admin users
+    }
+
     // Specific handling for restaurant login
     if (user.role === 'restaurant') {
       // Additional checks only for restaurant users
-      if (!user.userId) {
+      if (!user.id) {
         return NextResponse.json({
           message: 'Invalid restaurant user'
         }, { status: 500 });
@@ -51,7 +56,7 @@ export async function POST(req: NextRequest) {
 
       const [restaurantResults] = await pool.execute(
         'SELECT * FROM Restaurants WHERE userId = ? AND status = ?', 
-        [user.userId, 'approved']
+        [user.id, 'approved']
       );
 
       const restaurants = restaurantResults as any[];
@@ -67,40 +72,56 @@ export async function POST(req: NextRequest) {
       throw new Error('JWT_SECRET_KEY is not defined');
     }
 
+    // Create token with user information
+    const tokenData = {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      name: user.name || user.restaurantName || ''
+    };
+
+    console.log('Creating token with data:', tokenData); // Debug log
+
     const token = jwt.sign(
-      { 
-        userId: user.userId, 
-        email: user.email, 
-        role: user.role,
-        name: user.name || user.restaurantName || ''
-      },
+      tokenData,
       process.env.NEXT_PUBLIC_JWT_SECRET_KEY,
       { 
-        expiresIn: '1h',  // 1 hour expiration
-        algorithm: 'HS256' 
+        expiresIn: '1h',
+        algorithm: 'HS256'
       }
     );
 
-    // Create response with explicit cookie setting
+    // Create response
     const response = NextResponse.json({
       message: 'Login successful',
       user: {
-        user_id: user.userId,
+        id: user.id,
         email: user.email,
         role: user.role,
         name: user.name || user.restaurantName || ''
       }
     }, { status: 200 });
 
-    // Explicitly set cookie with more robust configuration
+    // Set HTTP-only cookie for security
     response.cookies.set({
       name: 'auth_token',
       value: token,
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 3600, // 1 hour in seconds
-      path: '/' // Ensure cookie is available across the site
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 // 1 hour
+    });
+
+    // Set a non-HTTP-only cookie for logout functionality
+    response.cookies.set({
+      name: 'logged_in',
+      value: 'true',
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 // 1 hour
     });
 
     return response;
@@ -109,7 +130,10 @@ export async function POST(req: NextRequest) {
     console.error('Login error:', error);
     return NextResponse.json({ 
       message: 'Internal server error', 
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
+      details: process.env.NODE_ENV === 'development' ? error : undefined
     }, { status: 500 });
+  } finally {
+    await pool.end();
   }
 }
