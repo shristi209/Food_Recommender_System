@@ -7,37 +7,33 @@ import { NextRequest } from 'next/server';
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const categoryId = searchParams.get('categoryId');
     const pool = await getDbPool();
     
-    // Get categories
-    const [categories] = await pool.execute<RowDataPacket[]>(
-      'SELECT * FROM categories'
-    );
+    // Join with restaurants table to get restaurant info
+    const [menuItems] = await pool.execute(`
+      SELECT 
+        m.*,
+        r.restaurantName,
+        r.address,
+        r.phone,
+        c.name as cuisineName,
+        cat.name as categoryName
+      FROM menu_items m
+      JOIN restaurants r ON m.restaurantId = r.id
+      JOIN cuisines c ON m.cuisineId = c.id
+      JOIN categories cat ON m.categoryId = cat.id
+      WHERE r.id IN (
+        SELECT id FROM restaurants WHERE userId IN (
+          SELECT id FROM users WHERE role = 'restaurant'
+        )
+      )
+      ORDER BY m.createdAt DESC
+    `);
 
-    // Get cuisines based on category if provided
-    let cuisines: RowDataPacket[] = [];
-    if (categoryId) {
-      const [categoryCuisines] = await pool.execute<RowDataPacket[]>(
-        'SELECT * FROM cuisines WHERE categoryId = ?',
-        [categoryId]
-      );
-      cuisines = categoryCuisines;
-    } else {
-      const [allCuisines] = await pool.execute<RowDataPacket[]>(
-        'SELECT * FROM cuisines'
-      );
-      cuisines = allCuisines;
-    }
-
-    return NextResponse.json({
-      cuisines,
-      categories
-    });
+    return NextResponse.json({ menuItems });
   } catch (error) {
-    console.error('Failed to fetch cuisines and categories:', error);
-    return NextResponse.json({ error: 'Failed to fetch data' }, { status: 500 });
+    console.error('Failed to fetch menu items:', error);
+    return NextResponse.json({ error: 'Failed to fetch menu items' }, { status: 500 });
   }
 }
 

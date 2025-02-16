@@ -25,15 +25,14 @@ const adminNavItems: SidebarItem[] = [
   { name: 'Dashboard', href: '/dashboard/admin', icon: HomeIcon },
   { name: 'Restaurants', href: '/dashboard/admin/restaurants', icon: BuildingStorefrontIcon },
   { name: 'Users', href: '/dashboard/admin/users', icon: UserGroupIcon },
-  { name: 'Settings', href: '/dashboard/admin/settings', icon: Cog6ToothIcon },
+  // { name: 'Settings', href: '/dashboard/admin/settings', icon: Cog6ToothIcon },
 ];
 
 const restaurantNavItems: SidebarItem[] = [
   { name: 'Dashboard', href: '/dashboard/restaurant', icon: HomeIcon },
-  { name: 'Orders', href: '/dashboard/restaurant/orders', icon: ClipboardDocumentListIcon },
-  { name: 'Menu', href: '/dashboard/restaurant/menu', icon: BuildingStorefrontIcon },
-  { name: 'Analytics', href: '/dashboard/restaurant/analytics', icon: ChartPieIcon },
-  { name: 'Settings', href: '/dashboard/restaurant/settings', icon: Cog6ToothIcon },
+  { name: 'Add Items', href: '/dashboard/restaurant/menu', icon: BuildingStorefrontIcon },
+  { name: 'View Items', href: '/dashboard/restaurant/viewmenu', icon: Cog6ToothIcon },
+  { name: 'Edit Items', href: '/dashboard/restaurant/editmenu', icon: Cog6ToothIcon },
 ];
 
 interface DashboardLayoutProps {

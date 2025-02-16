@@ -76,12 +76,11 @@ export default function MenuPage() {
   useEffect(() => {
     async function fetchCuisines() {
       try {
-        const response = await fetch('/api/cuisines');
+        const response = await fetch('/api/menu');
         if (!response.ok) {
           throw new Error('Failed to fetch cuisines');
         }
         const data = await response.json();
-        console.log("cuisinesssssssssssssssss",data);
         // Convert cuisine IDs to strings for the form
         setCuisines(data.cuisines.map((cuisine: any) => ({
           ...cuisine,
@@ -101,6 +100,33 @@ export default function MenuPage() {
     fetchCuisines();
   }, [toast]);
 
+//   useEffect(() => {
+//     async function fetchCuisines() {
+//       try {
+//         const response = await fetch('/api/menu');
+//         if (!response.ok) {
+//           throw new Error('Failed to fetch cuisines');
+//         }
+//         const data = await response.json();
+//         // Convert cuisine IDs to strings for the form
+//         setCuisines(data.cuisines.map((cuisine: any) => ({
+//           ...cuisine,
+//           id: cuisine.id.toString()
+//         })));
+//       } catch (error) {
+//         toast({
+//           title: "Error",
+//           description: "Failed to load cuisines",
+//           variant: "destructive",
+//         });
+//       } finally {
+//         setLoadingCuisines(false);
+//       }
+//     }
+
+//     fetchCuisines();
+//   }, [toast]);
+
   const form = useForm<z.infer<typeof menuItemSchema>>({
     resolver: zodResolver(menuItemSchema),
     defaultValues: {
@@ -117,10 +143,12 @@ export default function MenuPage() {
   async function onSubmit(values: z.infer<typeof menuItemSchema>) {
     try {
       setLoading(true);
+      // console.log("values...........................", values);
 
       const price = Number(values.price);
 
       const selectedCuisine = cuisines.find(c => c.id.toString() === values.cuisineId);
+      // console.log("selectedCuisine...........................", selectedCuisine);
       if (!selectedCuisine) {
         toast({
           title: "Error",
@@ -129,6 +157,7 @@ export default function MenuPage() {
         });
         return;
       }
+      // console.log("selectedCuisine.categoryId...........................", selectedCuisine.categoryId);
 
       const response = await axios.post('/api/menu', {
         name: values.name,
@@ -188,7 +217,7 @@ export default function MenuPage() {
                 name="cuisineId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-700 dark:text-gray-200 font-medium">Item</FormLabel>
+                    <FormLabel className="text-gray-700 dark:text-gray-200 font-medium">Cuisine</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       value={field.value}
