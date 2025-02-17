@@ -16,6 +16,7 @@ import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetTrigger
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { MainNav } from './components/main-nav';
+import { useInteractions } from '@/hooks/use-interactions';
 
 interface MenuItem {
   id: number;
@@ -44,6 +45,7 @@ interface Restaurant {
 
 export default function Home() {
   const { isAuthenticated, user, logout } = useAuth();
+  const { trackView, trackCartAdd, trackSearch } = useInteractions();
   console.log("user...", user);
   console.log("isAuthenticated...", isAuthenticated);
 
@@ -52,6 +54,9 @@ export default function Home() {
   const { toast } = useToast();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [lastTrackedQuery, setLastTrackedQuery] = useState('');
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [restaurantMenuItems, setRestaurantMenuItems] = useState<MenuItem[]>([]);
@@ -150,6 +155,92 @@ export default function Home() {
     }
   };
 
+  // Debounce search query (wait for user to stop typing)
+  useEffect(() => {
+    const debounceTimeout = setTimeout(() => {
+      if (searchQuery) {
+        setDebouncedQuery(searchQuery);
+      }
+    }, 500); // Wait 500ms after last keystroke
+
+    return () => {
+      clearTimeout(debounceTimeout);
+    };
+  }, [searchQuery]);
+
+  // Perform search when debounced query changes
+  useEffect(() => {
+    if (debouncedQuery) {
+      performSearch(debouncedQuery);
+    }
+  }, [debouncedQuery]);
+
+  const handleSearchInput = (query: string) => {
+    setSearchQuery(query);
+    // Clear any existing tracking timeout
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+  };
+
+  const performSearch = async (query: string) => {
+    try {
+      const response = await fetch(`/api/menu-items/search?q=${encodeURIComponent(query)}`);
+      const data = await response.json();
+      setMenuItems(data);
+      console.log("Search results:", data);
+
+      // Set timeout to track interaction after 30 seconds
+      const timeout = setTimeout(() => {
+        if (query && query !== lastTrackedQuery) {
+          console.log("Tracking search interaction after 30s:", query);
+          data.forEach((item: MenuItem) => {
+            trackSearch(item.id);
+          });
+          setLastTrackedQuery(query);
+        }
+      }, 30000); // 30 seconds after finished typing
+
+      setSearchTimeout(timeout);
+    } catch (error) {
+      console.error('Error searching menu items:', error);
+    }
+  };
+
+  // Cleanup timeout on component unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+    };
+  }, [searchTimeout]);
+
+  const handleViewDetails = (item: MenuItem) => {
+    setSelectedItem(item);
+    // Track view interaction
+    trackView(item.id);
+    console.log("Viewing details of:", item);
+  };
+
+  const handleAddToCart = (item: MenuItem) => {
+    addToCart({
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      quantity: 1,
+      restaurantId: item.restaurantId,
+      restaurantName: item.restaurantName
+    });
+    // Track cart addition
+    trackCartAdd(item.id);
+    console.log("Added item to cart:", item);
+    toast({
+      title: "Added to cart",
+      description: `${item.name} has been added to your cart.`
+    });
+  };
+
   if (loading) {
     return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
   }
@@ -158,7 +249,7 @@ export default function Home() {
     <div className="min-h-screen bg-background">
       <MainNav 
         searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
+        onSearchChange={(query) => handleSearchInput(query)}
         cart={cart}
         onRemoveFromCart={removeFromCart}
         cartTotal={cartTotal}
@@ -233,14 +324,14 @@ export default function Home() {
                   <Button 
                     variant="outline"
                     className="flex-1"
-                    onClick={() => setSelectedItem(item)}
+                    onClick={() => handleViewDetails(item)}
                   >
                     <Eye className="h-4 w-4 mr-2" />
                     View
                   </Button>
                   <Button 
                     className="flex-1"
-                    onClick={() => addToCart(item)}
+                    onClick={() => handleAddToCart(item)}
                   >
                     <ShoppingCart className="h-4 w-4 mr-2" />
                     Add to Cart
@@ -257,18 +348,24 @@ export default function Home() {
           ))}
         </div>
 
-        {menuItems.filter((item) => 
-          searchQuery === '' || 
-          item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.restaurantName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.cuisineName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.categoryName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.ingredients.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.phone.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.isVeg.toString().toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.spicyLevel.toString().toLowerCase().includes(searchQuery.toLowerCase())
-        ).length === 0 && (
+        {menuItems.filter((item) => {
+          if (!searchQuery) return true;
+          
+          const query = searchQuery.toLowerCase();
+          const fields = {
+            name: item.name?.toLowerCase() || '',
+            restaurant: item.restaurantName?.toLowerCase() || '',
+            cuisine: item.cuisineName?.toLowerCase() || '',
+            category: item.categoryName?.toLowerCase() || '',
+            ingredients: item.ingredients?.toLowerCase() || '',
+            address: item.address?.toLowerCase() || '',
+            phone: item.phone?.toLowerCase() || '',
+            isVeg: item.isVeg?.toString().toLowerCase() || '',
+            spicyLevel: item.spicyLevel?.toString().toLowerCase() || ''
+          };
+
+          return Object.values(fields).some(field => field.includes(query));
+        }).length === 0 && (
           <div className="text-center py-8">
             <p className="text-lg text-muted-foreground">No menu items found matching your search.</p>
           </div>
@@ -314,7 +411,7 @@ export default function Home() {
                 <Button 
                   className="w-full"
                   onClick={() => {
-                    addToCart(selectedItem);
+                    handleAddToCart(selectedItem);
                     setSelectedItem(null);
                   }}
                 >
@@ -404,14 +501,14 @@ export default function Home() {
                           <Button 
                             variant="outline"
                             className="flex-1"
-                            onClick={() => setSelectedItem(menuItem)}
+                            onClick={() => handleViewDetails(menuItem)}
                           >
                             <Eye className="h-4 w-4 mr-2" />
                             View
                           </Button>
                           <Button 
                             className="flex-1"
-                            onClick={() => addToCart(menuItem)}
+                            onClick={() => handleAddToCart(menuItem)}
                           >
                             <ShoppingCart className="h-4 w-4 mr-2" />
                             Add to Cart

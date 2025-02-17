@@ -8,11 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useInteractions } from '@/hooks/use-interactions';
 import { MapPin, Phone, Star, Eye, ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
 import { useCart } from '@/contexts/cart-context';
 import { MainNav } from '@/app/components/main-nav';
-import { CartItem } from '@/app/types';
 
 interface MenuItem {
   id: number;
@@ -37,14 +37,23 @@ interface Restaurant {
 
 export default function RestaurantPage() {
   const params = useParams();
+  const { id } = params;
   const { toast } = useToast();
-  const { addItem } = useCart();
+  const { items: cartItems, addItem } = useCart();
+  const { trackView, trackCartAdd, trackInteraction } = useInteractions();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
-  const [cart, setCart] = useState<CartItem[]>([]);
 
   useEffect(() => {
+    // Track restaurant view
+    trackInteraction({
+      type: 'restaurant_view',
+      itemId: Number(id),
+      metadata: { restaurantId: Number(id) }
+    });
+    console.log("params.id............",params.id);
+
     fetchRestaurant();
   }, [params.id]);
 
@@ -79,41 +88,51 @@ export default function RestaurantPage() {
     }
   };
 
+  const handleViewDetails = (item: MenuItem) => {
+    setSelectedItem(item);
+    // Track view interaction
+    trackView(item.id);
+    console.log("Viewing details of:", item);
+  };
+
   const handleAddToCart = (item: MenuItem) => {
-    const cartItem: CartItem = {
+    if (!restaurant) return;
+    
+    const cartItem = {
       id: item.id,
       name: item.name,
       price: item.price,
-      picture: item.picture,
-      restaurantName: restaurant?.restaurantName || ''
+      picture: item.picture || '', // Add default empty string if picture is missing
+      restaurantId: restaurant.id,
+      restaurantName: restaurant.restaurantName
     };
+
     addItem(cartItem);
+    
+    // Track menu item cart addition
+    trackInteraction({
+      type: 'menu_item_cart_add',
+      itemId: item.id,
+      metadata: { 
+        restaurantId: Number(id),
+        menuItemId: item.id 
+      }
+    });
+
     toast({
       title: "Added to Cart",
       description: `${item.name} has been added to your cart.`
     });
   };
 
-  const removeFromCart = (itemId: string | number) => {
-    setCart((currentCart) => {
-      const existingItem = currentCart.find((item) => item.id === itemId);
-      if (existingItem && existingItem.quantity > 1) {
-        return currentCart.map((item) =>
-          item.id === itemId ? { ...item, quantity: item.quantity - 1 } : item
-        );
-      }
-      return currentCart.filter((item) => item.id !== itemId);
-    });
-  };
-
-  const cartTotal = cart.reduce((total, item) => total + item.price * item.quantity, 0);
+  const cartTotal = cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
 
   if (loading) {
     return (
       <>
         <MainNav 
-          cart={cart}
-          onRemoveFromCart={removeFromCart}
+          cart={cartItems}
+          onRemoveFromCart={() => {}} // We'll handle this through context instead
           cartTotal={cartTotal}
         />
         <div className="flex justify-center items-center min-h-screen">Loading...</div>
@@ -125,8 +144,8 @@ export default function RestaurantPage() {
     return (
       <>
         <MainNav 
-          cart={cart}
-          onRemoveFromCart={removeFromCart}
+          cart={cartItems}
+          onRemoveFromCart={() => {}}
           cartTotal={cartTotal}
         />
         <div className="container mx-auto px-4 py-8 mt-16">
@@ -144,8 +163,8 @@ export default function RestaurantPage() {
   return (
     <div className="min-h-screen bg-background">
       <MainNav 
-        cart={cart}
-        onRemoveFromCart={removeFromCart}
+        cart={cartItems}
+        onRemoveFromCart={() => {}}
         cartTotal={cartTotal}
       />
 
@@ -236,7 +255,7 @@ export default function RestaurantPage() {
                         <Button 
                           variant="outline"
                           className="flex-1"
-                          onClick={() => setSelectedItem(item)}
+                          onClick={() => handleViewDetails(item)}
                         >
                           <Eye className="h-4 w-4 mr-2" />
                           View Details

@@ -63,16 +63,15 @@ CREATE TABLE menu_items (
 CREATE TABLE user_interactions (
     id INT PRIMARY KEY AUTO_INCREMENT,
     userId INT NOT NULL,
-    menuItemId INT,
-    restaurantId INT,
-    viewDuration INT DEFAULT 0, -- Duration in seconds
-    addToCart TINYINT(1) DEFAULT 0,
-    spicyPreference INT DEFAULT 0,
-    vegPreference TINYINT(1) DEFAULT 0,
-    interactionTime DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (userId) REFERENCES users(id),
-    FOREIGN KEY (menuItemId) REFERENCES menu_items(id),
-    FOREIGN KEY (restaurantId) REFERENCES restaurants(id)
+    menuItemId INT NOT NULL,
+    viewCount INT DEFAULT 0,
+    cartAddCount INT DEFAULT 0,
+    searchCount INT DEFAULT 0,
+    preferenceScore DECIMAL(10,4) DEFAULT 0,
+    lastInteractionAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (menuItemId) REFERENCES menu_items(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_user_menu (userId, menuItemId)
 );
 
 INSERT INTO cuisines (name)
