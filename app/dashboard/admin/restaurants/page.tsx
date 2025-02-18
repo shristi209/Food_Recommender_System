@@ -3,69 +3,114 @@
 import { useState, useEffect } from 'react';
 import { BuildingStorefrontIcon } from '@heroicons/react/24/outline';
 import axios from 'axios';
+// import toast from '@/components/toast';
 
 interface Restaurant {
   id: string;
   restaurantName: string;
   email: string;
-  status: 'pending' | 'approved' | 'rejected';
   address: string;
   registrationCertificate: string;
   panImage: string;
   panNumber: string;
   phone: string;
+  status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
 }
+
+type RestaurantStatus = 'pending' | 'approved' | 'rejected';
 
 export default function RestaurantsPage() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
 
   useEffect(() => {
-    async function fetchRestaurants() {
+    const fetchRestaurants = async () => {
       try {
-        const response = await fetch('/api/restaurants');
-        if (!response.ok) {
-          throw new Error('Failed to fetch restaurants');
+        const response = await axios.get('/api/restaurants');
+        console.log('API Response:', response.data); // Debug log
+
+        if (!Array.isArray(response.data)) {
+          console.error('Expected array of restaurants, got:', typeof response.data);
+          return;
         }
-        const data = await response.json();
-        setRestaurants(data.restaurants);
+
+        const data = response.data.map((restaurant: any) => {
+          // Ensure status is one of the valid values, default to 'pending' if invalid
+          const status: RestaurantStatus = ['pending', 'approved', 'rejected'].includes(restaurant.status) 
+            ? restaurant.status 
+            : 'pending';
+          
+          // Log any restaurants with invalid status
+          if (restaurant.status && !['pending', 'approved', 'rejected'].includes(restaurant.status)) {
+            console.warn(`Restaurant ${restaurant.id} has invalid status: ${restaurant.status}`);
+          }
+          
+          return {
+            id: restaurant.id,
+            restaurantName: restaurant.restaurantName,
+            email: restaurant.email,
+            address: restaurant.address,
+            registrationCertificate: restaurant.registrationCertificate,
+            panImage: restaurant.panImage,
+            panNumber: restaurant.panNumber,
+            phone: restaurant.phone,
+            status,
+            createdAt: restaurant.createdAt
+          } as Restaurant;
+        });
+
+        console.log('Processed restaurants:', data); // Debug log
+        setRestaurants(data);
       } catch (error) {
-        console.error('Failed to fetch restaurants:', error);
+        console.error('Error fetching restaurants:', error);
+        if (axios.isAxiosError(error)) {
+          console.error('Response data:', error.response?.data);
+        }
       }
-    }
+    };
+
     fetchRestaurants();
   }, []);
 
-  const handleStatusChange = async (id: string, newStatus: 'approved' | 'rejected') => {
+  const handleStatusChange = async (id: string, newStatus: RestaurantStatus) => {
+    // Store the current status to revert in case of error
+    const currentRestaurant = restaurants.find(r => r.id === id);
+    const oldStatus = currentRestaurant?.status || 'pending';
+
     // Optimistically update the UI
     setRestaurants(restaurants.map(restaurant =>
       restaurant.id === id ? { ...restaurant, status: newStatus } : restaurant
     ));
 
     try {
-      const response = await fetch(`/api/restaurants/${id}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: newStatus }),
+      const response = await axios.patch(`/api/restaurants/${id}/status`, {
+        status: newStatus
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to update restaurant status');
-      }
+      const updatedRestaurant = response.data;
+      
+      // Ensure the response has the correct status type
+      const typedRestaurant: Restaurant = {
+        ...updatedRestaurant,
+        status: updatedRestaurant.status as RestaurantStatus
+      };
 
-      const updatedRestaurant = await response.json();
-      // Optionally, update the local state if necessary
+      // Update the local state with the response from the server
       setRestaurants(restaurants.map(restaurant =>
-        restaurant.id === updatedRestaurant.id ? updatedRestaurant : restaurant
+        restaurant.id === typedRestaurant.id ? typedRestaurant : restaurant
       ));
     } catch (error) {
       console.error('Error updating restaurant status:', error);
       // Revert status change in case of error
       setRestaurants(restaurants.map(restaurant =>
-        restaurant.id === id ? { ...restaurant, status: 'pending' } : restaurant
+        restaurant.id === id ? { ...restaurant, status: oldStatus } : restaurant
       ));
+      // Show error message to user
+      // toast({
+      //   title: "Error",
+      //   description: "Failed to update restaurant status. Please try again.",
+      //   variant: "destructive",
+      // });
     }
   };
 

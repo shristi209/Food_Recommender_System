@@ -126,7 +126,7 @@ export function MainNav({
                 <Link
                   href={
                     user?.role === 'admin'
-                      ? '/dashboard/admin'
+                      ? '/dashboard/admin/restaurants'
                       : user?.role === 'restaurant'
                         ? '/dashboard/restaurant'
                         : '/profile'

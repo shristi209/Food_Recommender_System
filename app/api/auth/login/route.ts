@@ -68,10 +68,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (!process.env.NEXT_PUBLIC_JWT_SECRET_KEY) {
-      throw new Error('JWT_SECRET_KEY is not defined');
-    }
-
     // Create token with user information
     const tokenData = {
       id: user.id,
@@ -82,10 +78,14 @@ export async function POST(req: NextRequest) {
 
     console.log('Creating token with data:', tokenData); // Debug log
 
+    if (!process.env.NEXT_PUBLIC_JWT_SECRET_KEY) {
+      throw new Error('NEXT_PUBLIC_JWT_SECRET_KEY is not defined');
+    }
+
     const token = jwt.sign(
       tokenData,
       process.env.NEXT_PUBLIC_JWT_SECRET_KEY,
-      { 
+      {
         expiresIn: '1h',
         algorithm: 'HS256'
       }

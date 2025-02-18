@@ -117,14 +117,14 @@ export async function POST(request: NextRequest) {
             await connection.commit();
 
             return new Response(JSON.stringify({
-                message: role === "restaurant" 
-                    ? "Restaurant registered successfully" 
-                    : "User registered successfully",
-                userId: userId
+                success: true,
+                message: "Registration successful",
+                redirectUrl: "/login"
             }), { 
                 status: 200,
                 headers: { 'Content-Type': 'application/json' }
             });
+
         } catch (insertError) {
             await connection.rollback();
             console.error("Registration insert error:", insertError);

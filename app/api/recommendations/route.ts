@@ -1,21 +1,194 @@
 import { NextResponse } from 'next/server';
 import { RowDataPacket } from 'mysql2';
 import { getDbPool } from '@/lib/database';
+import { verifyAuth } from '@/lib/auth';
+import { NextRequest } from 'next/server';
+import { cosineSimilarity, createMenuItemVector, createUserInteractionVector } from '@/app/utils/vectorUtils';
 
-// Function to calculate cosine similarity between two vectors
-function cosineSimilarity(vector1: number[], vector2: number[]): number {
-  if (vector1.length !== vector2.length) return 0;
-  
-  const dotProduct = vector1.reduce((acc, val, i) => acc + val * vector2[i], 0);
-  const magnitude1 = Math.sqrt(vector1.reduce((acc, val) => acc + val * val, 0));
-  const magnitude2 = Math.sqrt(vector2.reduce((acc, val) => acc + val * val, 0));
-  
-  return dotProduct / (magnitude1 * magnitude2);
+interface MenuItem extends RowDataPacket {
+  id: number;
+  restaurantId: number;
+  name: string;
+  cuisineId: number;
+  categoryId: number;
+  spicyLevel: number;
+  isVeg: number;  // TINYINT(1) in MySQL
+  ingredients: string;
+  vector: string;
+  picture: string;
+  price: number;
+  createdAt: Date;
+  // Joined fields
+  restaurantName: string;
+  cuisineName: string;
+  categoryName: string;
 }
 
-// Function to convert string vector to number array
-function vectorToArray(vectorString: string): number[] {
-  return vectorString.replace(/[\[\]]/g, '').split(',').map(Number);
+interface UserInteraction extends RowDataPacket {
+  id: number;
+  userId: number;
+  menuItemId: number;
+  viewCount: number;
+  cartAddCount: number;
+  searchCount: number;
+  preferenceScore: number;
+  lastInteractionAt: Date;
+}
+
+interface RecommendationItem extends MenuItem {
+  similarityScore: number;
+  matchingFactors: {
+    cuisine: boolean;
+    category: boolean;
+    spicyLevel: boolean;
+    dietaryMatch: boolean;
+  };
+}
+
+// GET /api/recommendations - Get personalized recommendations
+export async function GET(req: NextRequest) {
+  const db = await getDbPool();
+  try {
+    // Verify user authentication
+    const decoded = verifyAuth(req);
+    if (!decoded?.id) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+    const userId = decoded.id;
+
+    // Get user's interaction data
+    const [userInteractions] = await db.query<UserInteraction[]>(
+      `SELECT * FROM user_interactions WHERE userId = ? ORDER BY lastInteractionAt DESC LIMIT 1`,
+      [userId]
+    );
+
+    if (!userInteractions || userInteractions.length === 0) {
+      // Return popular items if no user interactions
+      const [popularItems] = await db.query<MenuItem[]>(
+        `SELECT 
+          m.*,
+          r.restaurantName,
+          c.name as cuisineName,
+          cat.name as categoryName
+         FROM menu_items m 
+         JOIN restaurants r ON m.restaurantId = r.id
+         JOIN cuisines c ON m.cuisineId = c.id
+         JOIN categories cat ON m.categoryId = cat.id
+         ORDER BY 
+           (SELECT COUNT(*) FROM user_interactions ui WHERE ui.menuItemId = m.id) DESC
+         LIMIT 10`
+      );
+
+      return NextResponse.json({
+        type: 'popular',
+        recommendations: popularItems.map(item => ({
+          ...item,
+          similarityScore: 0,
+          matchingFactors: {
+            cuisine: false,
+            category: false,
+            spicyLevel: false,
+            dietaryMatch: false
+          }
+        }))
+      });
+    }
+
+    // Get all menu items with their details
+    const [menuItems] = await db.query<MenuItem[]>(
+      `SELECT 
+        m.*,
+        r.restaurantName,
+        c.name as cuisineName,
+        cat.name as categoryName
+       FROM menu_items m 
+       JOIN restaurants r ON m.restaurantId = r.id
+       JOIN cuisines c ON m.cuisineId = c.id
+       JOIN categories cat ON m.categoryId = cat.id`
+    );
+
+    // Calculate user preferences based on interactions
+    const [userPreferences] = await db.query<RowDataPacket[]>(
+      `SELECT 
+        ROUND(AVG(m.spicyLevel)) as avgSpicyLevel,
+        MAX(m.isVeg) as preferredVeg,
+        GROUP_CONCAT(DISTINCT m.cuisineId) as preferredCuisines,
+        GROUP_CONCAT(DISTINCT m.categoryId) as preferredCategories
+       FROM user_interactions ui
+       JOIN menu_items m ON ui.menuItemId = m.id
+       WHERE ui.userId = ?
+       GROUP BY ui.userId`,
+      [userId]
+    );
+
+    const preferences = userPreferences[0];
+    const preferredCuisineIds = preferences.preferredCuisines?.split(',').map(Number) || [];
+    const preferredCategoryIds = preferences.preferredCategories?.split(',').map(Number) || [];
+
+    // Create user preference vector once
+    const userVector = createUserInteractionVector({
+      cuisinePreference: preferredCuisineIds,
+      categoryPreference: preferredCategoryIds,
+      spicyPreference: preferences.avgSpicyLevel || 0,
+      vegPreference: preferences.preferredVeg === 1
+    });
+
+    // Calculate recommendations
+    const recommendations: RecommendationItem[] = menuItems.map(item => {
+      // Create menu item vector
+      const itemVector = createMenuItemVector({
+        cuisineId: item.cuisineId,
+        categoryId: item.categoryId,
+        spicyLevel: item.spicyLevel,
+        isVeg: item.isVeg
+      });
+
+      // Calculate similarity
+      const similarityScore = cosineSimilarity(itemVector, userVector);
+
+      return {
+        ...item,
+        similarityScore,
+        matchingFactors: {
+          cuisine: preferredCuisineIds.includes(item.cuisineId),
+          category: preferredCategoryIds.includes(item.categoryId),
+          spicyLevel: Math.abs(preferences.avgSpicyLevel - item.spicyLevel) <= 1,
+          dietaryMatch: preferences.preferredVeg === item.isVeg
+        }
+      };
+    });
+
+    // Sort by similarity score and get top 10
+    const topRecommendations = recommendations
+      .sort((a, b) => b.similarityScore - a.similarityScore)
+      .slice(0, 10);
+
+    // Get user preferences for display
+    const userPreferencesDisplay = {
+      preferredCuisines: menuItems
+        .filter(item => preferredCuisineIds.includes(item.cuisineId))
+        .map(item => item.cuisineName)
+        .filter((value, index, self) => self.indexOf(value) === index),
+      spicyPreference: preferences.avgSpicyLevel || 0,
+      vegPreference: preferences.preferredVeg === 1
+    };
+
+    return NextResponse.json({
+      type: 'personalized',
+      recommendations: topRecommendations,
+      userPreferences: userPreferencesDisplay
+    });
+
+  } catch (error) {
+    console.error('Recommendation error:', error);
+    return NextResponse.json(
+      { error: 'Failed to get recommendations' },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(request: Request) {
@@ -50,7 +223,12 @@ export async function POST(request: Request) {
     );
 
     // Create feature vector based on selected item and user history
-    const selectedVector = vectorToArray(selectedItem[0].vector);
+    const selectedVector = createMenuItemVector({
+      cuisineId: selectedItem[0].cuisineId,
+      categoryId: selectedItem[0].categoryId,
+      spicyLevel: selectedItem[0].spicyLevel,
+      isVeg: selectedItem[0].isVeg
+    });
     
     // Get recommendations using cosine similarity
     const [menuItems] = await pool.execute<RowDataPacket[]>(
@@ -68,10 +246,21 @@ export async function POST(request: Request) {
     );
 
     // Calculate similarity scores
-    const recommendations = menuItems
+    const recommendations: RecommendationItem[] = menuItems
       .map(item => ({
         ...item,
-        similarityScore: cosineSimilarity(selectedVector, vectorToArray(item.vector))
+        similarityScore: cosineSimilarity(selectedVector, createMenuItemVector({
+          cuisineId: item.cuisineId,
+          categoryId: item.categoryId,
+          spicyLevel: item.spicyLevel,
+          isVeg: item.isVeg
+        })),
+        matchingFactors: {
+          cuisine: userHistory[0].avg_spicy_level === item.spicyLevel,
+          category: userHistory[0].veg_preference === item.isVeg,
+          spicyLevel: Math.abs(userHistory[0].avg_spicy_level - item.spicyLevel) <= 1,
+          dietaryMatch: userHistory[0].veg_preference === item.isVeg
+        }
       }))
       .sort((a, b) => b.similarityScore - a.similarityScore)
       .slice(0, 3);

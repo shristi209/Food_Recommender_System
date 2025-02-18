@@ -68,7 +68,7 @@ export default function Profile() {
             <TabsTrigger value="orders">Order History</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="profile">
+          {/* <TabsContent value="profile">
             <Card>
               <CardHeader>
                 <CardTitle>Profile Information</CardTitle>
@@ -113,9 +113,9 @@ export default function Profile() {
                 </form>
               </CardContent>
             </Card>
-          </TabsContent>
+          </TabsContent> */}
 
-          <TabsContent value="orders">
+          {/* <TabsContent value="orders">
             <div className="space-y-6">
               {orders.map((order) => (
                 <Card key={order.id}>
@@ -178,7 +178,7 @@ export default function Profile() {
                 </Card>
               ))}
             </div>
-          </TabsContent>
+          </TabsContent> */}
         </Tabs>
       </div>
     </div>

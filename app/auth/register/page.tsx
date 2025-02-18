@@ -9,8 +9,11 @@ import { useState, FormEvent } from 'react';
 import { UserRole } from '@/app/types';
 import { toast } from 'sonner';
 import axios from 'axios';
+import { useRouter } from 'next/navigation';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function Register() {
+  const router = useRouter();
   const [role, setRole] = useState<UserRole>();
   const [step, setStep] = useState(1);
 
@@ -19,6 +22,8 @@ export default function Register() {
   const [customerEmail, setCustomerEmail] = useState('');
   const [customerPassword, setCustomerPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCustomerPassword, setShowCustomerPassword] = useState(false);
+  const [showCustomerConfirmPassword, setShowCustomerConfirmPassword] = useState(false);
 
   // Restaurant form state
   const [restaurantName, setRestaurantName] = useState('');
@@ -26,6 +31,9 @@ export default function Register() {
   const [restaurantPhone, setRestaurantPhone] = useState('');
   const [restaurantAddress, setRestaurantAddress] = useState('');
   const [restaurantPassword, setRestaurantPassword] = useState('');
+  const [restaurantConfirmPassword, setRestaurantConfirmPassword] = useState('');
+  const [showRestaurantPassword, setShowRestaurantPassword] = useState(false);
+  const [showRestaurantConfirmPassword, setShowRestaurantConfirmPassword] = useState(false);
   const [panNumber, setPanNumber] = useState('');
   const [registrationCertificate, setRegistrationCertificate] = useState<File | null>(null);
   const [panImage, setPanImage] = useState<File | null>(null);
@@ -45,6 +53,7 @@ export default function Register() {
     phone: '',
     address: '',
     password: '',
+    confirmPassword: '',
     panNumber: '',
     registrationCertificate: '',
     panImage: ''
@@ -89,6 +98,7 @@ export default function Register() {
       phone: '',
       address: '',
       password: '',
+      confirmPassword: '',
       panNumber: '',
       registrationCertificate: '',
       panImage: ''
@@ -113,6 +123,10 @@ export default function Register() {
     }
     if (restaurantPassword.length < 8) {
       newErrors.password = 'Password must be at least 8 characters';
+      isValid = false;
+    }
+    if (restaurantPassword !== restaurantConfirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
       isValid = false;
     }
     if (!panNumber.trim()) {
@@ -140,7 +154,6 @@ export default function Register() {
         if (!validateCustomerForm()) return;
 
         try {
-          // console.log(customerName, customerEmail, customerPassword);
           const response = await axios.post('/api/auth/register', {
             role: 'customer',
             name: customerName,
@@ -149,131 +162,76 @@ export default function Register() {
           });
 
           toast.success('Customer account created successfully!');
-          // Redirect or handle successful registration
-        } catch (error) {
-          if (axios.isAxiosError(error)) {
-            const errorResponse = error.response?.data;
-
-            // Specific error handling for email-related issues
-            if (error.response?.status === 400) {
-              // Email uniqueness error
-              const emailErrorMessage = 'This email is already in use. Please try a different email.';
-
-              if (role === 'customer') {
-                setCustomerErrors(prev => ({
-                  ...prev,
-                  email: emailErrorMessage
-                }));
-              } else if (role === 'restaurant') {
-                setRestaurantErrors(prev => ({
-                  ...prev,
-                  email: emailErrorMessage
-                }));
-              }
-
-              // Optional: Show a toast for additional visibility
-              toast.error(emailErrorMessage);
-            } else {
-              // Generic error handling for other types of errors
-              toast.error(
-                errorResponse?.message || 'Registration failed'
-              );
-            }
-          } else {
-            // Handle unexpected errors
-            toast.error('An unexpected error occurred during registration');
-          }
+          router.push('/auth/login');
+        } catch (error: any) {
+          handleRegistrationError(error);
         }
       } else if (role === 'restaurant') {
-        if (step === 1) {
-          setStep(2);
+        if (!validateRestaurantForm()) return;
+
+        // Check if passwords match
+        if (restaurantPassword !== restaurantConfirmPassword) {
+          setRestaurantErrors(prev => ({
+            ...prev,
+            confirmPassword: 'Passwords do not match'
+          }));
           return;
         }
 
-        const status = 'pending';
-
-        if (!validateRestaurantForm()) return;
-        console.log("frontend data", {
-          restaurantName, 
-          restaurantEmail, 
-          restaurantPassword, 
-          restaurantPhone, 
-          restaurantAddress, 
-          panNumber, 
-          registrationCertificate: registrationCertificate?.name, 
-          panImage: panImage?.name
-        });
-        
         const formData = new FormData();
-        
-        // Explicitly log each append operation
         formData.append('role', 'restaurant');
-        
         formData.append('restaurantName', restaurantName);
-        
         formData.append('email', restaurantEmail);
-        
-        formData.append('phone', restaurantPhone);
-        
-        formData.append('address', restaurantAddress);
-        
         formData.append('password', restaurantPassword);
-        
+        formData.append('phone', restaurantPhone);
+        formData.append('address', restaurantAddress);
         formData.append('panNumber', panNumber);
-        
-        formData.append('status', status || 'pending');
-        
-        // Detailed logging for file appends
         if (registrationCertificate) {
           formData.append('registrationCertificate', registrationCertificate);
         }
-        
         if (panImage) {
           formData.append('panImage', panImage);
-        } 
-
-        // Log entire FormData contents
-        for (let [key, value] of formData.entries()) {
-          console.log(`${key}:`, value);
         }
 
         try {
           const response = await axios.post('/api/auth/register', formData, {
             headers: {
-              'Content-Type': 'multipart/form-data'
-            }
+              'Content-Type': 'multipart/form-data',
+            },
           });
-          // console.log("response", response);
 
-          toast.success('Restaurant account created successfully!');
-          // Redirect or handle successful registration
-        } catch (error) {
-          console.error("Full error:", error);
-          if (axios.isAxiosError(error)) {
-            const errorResponse = error.response?.data;
-
-            // Specific error handling for email-related issues
-            if (error.response?.status === 400) {
-              // Email uniqueness error
-              const emailErrorMessage = 'This email is already in use. Please try a different email.';
-
-              // Optional: Show a toast for additional visibility
-              toast.error(emailErrorMessage);
-            } else {
-              // Generic error handling for other types of errors
-              toast.error(
-                errorResponse?.message || 'Registration failed'
-              );
-            }
-          } else {
-            // Handle unexpected errors
-            toast.error('An unexpected error occurred during registration');
-          }
+          toast.success('Restaurant registration submitted successfully! Please wait for admin approval.');
+          router.push('/auth/login');
+        } catch (error: any) {
+          handleRegistrationError(error);
         }
       }
     } catch (error) {
       console.error('Registration error:', error);
-      toast.error('An unexpected error occurred');
+      toast.error('Failed to register. Please try again.');
+    }
+  };
+
+  const handleRegistrationError = (error: any) => {
+    if (axios.isAxiosError(error)) {
+      const errorResponse = error.response?.data;
+
+      // Specific error handling for email-related issues
+      if (error.response?.status === 400) {
+        // Email uniqueness error
+        const emailErrorMessage = 'This email is already in use. Please try a different email.';
+
+        // Optional: Show a toast for additional visibility
+        toast.error(emailErrorMessage);
+      } else {
+        // Generic error handling for other types of errors
+        toast.error(
+          errorResponse?.message || 'Registration failed'
+        );
+      }
+    } else {
+      // Handle unexpected errors
+      toast.error('An unexpected error occurred during registration');
     }
   };
 
@@ -341,6 +299,7 @@ export default function Register() {
                       setRestaurantPhone('');
                       setRestaurantAddress('');
                       setRestaurantPassword('');
+                      setRestaurantConfirmPassword('');
                       setPanNumber('');
                       setRegistrationCertificate(null);
                       setPanImage(null);
@@ -350,6 +309,7 @@ export default function Register() {
                         phone: '',
                         address: '',
                         password: '',
+                        confirmPassword: '',
                         panNumber: '',
                         registrationCertificate: '',
                         panImage: ''
@@ -395,33 +355,57 @@ export default function Register() {
 
                     <div className="space-y-2">
                       <Label htmlFor="password">Password</Label>
-                      <Input
-                        id="password"
-                        name="password"
-                        type="password"
-                        placeholder="Enter your password"
-                        value={customerPassword}
-                        onChange={(e) => {
-                          setCustomerPassword(e.target.value);
-                          setCustomerErrors(prev => ({ ...prev, password: '' }));
-                        }}
-                      />
+                      <div className="relative">
+                        <Input
+                          id="password"
+                          type={showCustomerPassword ? 'text' : 'password'}
+                          placeholder="Enter your password"
+                          value={customerPassword}
+                          onChange={(e) => {
+                            setCustomerPassword(e.target.value);
+                            setCustomerErrors(prev => ({ ...prev, password: '' }));
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowCustomerPassword(!showCustomerPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2"
+                        >
+                          {showCustomerPassword ? (
+                            <EyeOff className="h-4 w-4 text-gray-500" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-gray-500" />
+                          )}
+                        </button>
+                      </div>
                       <ErrorMessage message={customerErrors.password} />
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="confirmPassword">Confirm Password</Label>
-                      <Input
-                        id="confirmPassword"
-                        name="confirmPassword"
-                        type="password"
-                        placeholder="Confirm your password"
-                        value={confirmPassword}
-                        onChange={(e) => {
-                          setConfirmPassword(e.target.value);
-                          setCustomerErrors(prev => ({ ...prev, confirmPassword: '' }));
-                        }}
-                      />
+                      <div className="relative">
+                        <Input
+                          id="confirmPassword"
+                          type={showCustomerConfirmPassword ? 'text' : 'password'}
+                          placeholder="Confirm your password"
+                          value={confirmPassword}
+                          onChange={(e) => {
+                            setConfirmPassword(e.target.value);
+                            setCustomerErrors(prev => ({ ...prev, confirmPassword: '' }));
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowCustomerConfirmPassword(!showCustomerConfirmPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2"
+                        >
+                          {showCustomerConfirmPassword ? (
+                            <EyeOff className="h-4 w-4 text-gray-500" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-gray-500" />
+                          )}
+                        </button>
+                      </div>
                       <ErrorMessage message={customerErrors.confirmPassword} />
                     </div>
 
@@ -498,18 +482,60 @@ export default function Register() {
 
                         <div className="space-y-2">
                           <Label htmlFor="restaurantPassword">Password</Label>
-                          <Input
-                            id="restaurantPassword"
-                            name="restaurantPassword"
-                            type="password"
-                            placeholder="Enter password"
-                            value={restaurantPassword}
-                            onChange={(e) => {
-                              setRestaurantPassword(e.target.value);
-                              setRestaurantErrors(prev => ({ ...prev, password: '' }));
-                            }}
-                          />
+                          <div className="relative">
+                            <Input
+                              id="restaurantPassword"
+                              name="restaurantPassword"
+                              type={showRestaurantPassword ? 'text' : 'password'}
+                              placeholder="Enter password"
+                              value={restaurantPassword}
+                              onChange={(e) => {
+                                setRestaurantPassword(e.target.value);
+                                setRestaurantErrors(prev => ({ ...prev, password: '' }));
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowRestaurantPassword(!showRestaurantPassword)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2"
+                            >
+                              {showRestaurantPassword ? (
+                                <EyeOff className="h-4 w-4 text-gray-500" />
+                              ) : (
+                                <Eye className="h-4 w-4 text-gray-500" />
+                              )}
+                            </button>
+                          </div>
                           <ErrorMessage message={restaurantErrors.password} />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="restaurantConfirmPassword">Confirm Password</Label>
+                          <div className="relative">
+                            <Input
+                              id="restaurantConfirmPassword"
+                              name="restaurantConfirmPassword"
+                              type={showRestaurantConfirmPassword ? 'text' : 'password'}
+                              placeholder="Confirm password"
+                              value={restaurantConfirmPassword}
+                              onChange={(e) => {
+                                setRestaurantConfirmPassword(e.target.value);
+                                setRestaurantErrors(prev => ({ ...prev, confirmPassword: '' }));
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowRestaurantConfirmPassword(!showRestaurantConfirmPassword)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2"
+                            >
+                              {showRestaurantConfirmPassword ? (
+                                <EyeOff className="h-4 w-4 text-gray-500" />
+                              ) : (
+                                <Eye className="h-4 w-4 text-gray-500" />
+                              )}
+                            </button>
+                          </div>
+                          <ErrorMessage message={restaurantErrors.confirmPassword} />
                         </div>
 
                         <Button
@@ -598,6 +624,18 @@ export default function Register() {
               </div>
             )}
           </form>
+          <div className="mt-4 text-center">
+            <p className="text-sm text-gray-600">
+              Already have an account?{' '}
+              <Button
+                variant="link"
+                className="p-0 text-primary hover:text-primary/80"
+                onClick={() => router.push('/auth/login')}
+              >
+                Login
+              </Button>
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

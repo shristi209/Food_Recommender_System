@@ -17,10 +17,9 @@ export async function GET() {
         r.createdAt
        FROM restaurants r`
     );
-          //  WHERE r.status = 'approved'`
 
-
-    return NextResponse.json({ restaurants: rows });
+    // Return rows directly instead of wrapping in an object
+    return NextResponse.json(rows);
   } catch (error) {
     console.error('Failed to fetch restaurants:', error);
     return NextResponse.json(

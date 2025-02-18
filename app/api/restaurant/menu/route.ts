@@ -9,13 +9,49 @@ export async function GET(request: NextRequest) {
   try {
     const restaurant = await getRestaurantFromRequest(request);
     
-    // Get menu items for this restaurant
+    // Get restaurant details
+    const [restaurantDetails] = await pool.execute(
+      `SELECT id, restaurantName, address, phone
+       FROM restaurants 
+       WHERE id = ?`,
+      [restaurant.id]
+    );
+
+    // Get menu items for this restaurant with cuisine and category details
     const [menuResults] = await pool.execute(
-      'SELECT * FROM MenuItems WHERE restaurantId = ? ORDER BY category, name',
+      `SELECT 
+        m.id as menuItemId,
+        m.name as menuItemName,
+        m.price,
+        m.picture,
+        m.spicyLevel,
+        m.isVeg,
+        m.ingredients,
+        c.name as cuisineName,
+        cat.name as categoryName
+      FROM menu_items m
+      LEFT JOIN cuisines c ON m.cuisineId = c.id
+      LEFT JOIN categories cat ON m.categoryId = cat.id
+      WHERE m.restaurantId = ?
+      ORDER BY cat.name, m.name`,
       [restaurant.id]
     );
     
-    return NextResponse.json(menuResults);
+    const restaurants = restaurantDetails as any[];
+    if (restaurants.length === 0) {
+      return NextResponse.json(
+        { error: 'Restaurant not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      id: restaurants[0].id,
+      restaurantName: restaurants[0].restaurantName,
+      address: restaurants[0].address,
+      phone: restaurants[0].phone,
+      menuItems: menuResults
+    });
     
   } catch (error) {
     console.error('Error fetching menu items:', error);
@@ -36,14 +72,25 @@ export async function POST(request: NextRequest) {
     const restaurant = await getRestaurantFromRequest(request);
     
     // Get the menu item data from request body
-    const { name, description, price, category, image } = await request.json();
+    const { 
+      name, 
+      price, 
+      cuisineId,
+      categoryId,
+      spicyLevel,
+      isVeg,
+      ingredients,
+      picture 
+    } = await request.json();
     
     // Insert new menu item
     const [result] = await pool.execute(
-      `INSERT INTO MenuItems (
-        restaurantId, name, description, price, category, image
-      ) VALUES (?, ?, ?, ?, ?, ?)`,
-      [restaurant.id, name, description, price, category, image]
+      `INSERT INTO menu_items (
+        restaurantId, name, price, cuisineId, categoryId,
+        spicyLevel, isVeg, ingredients, picture
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [restaurant.id, name, price, cuisineId, categoryId,
+       spicyLevel, isVeg, ingredients, picture]
     );
     
     return NextResponse.json({ 

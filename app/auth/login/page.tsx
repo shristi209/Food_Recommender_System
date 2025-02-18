@@ -9,10 +9,12 @@ import { toast } from 'sonner';
 import axios from 'axios';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({
     email: '',
@@ -74,13 +76,30 @@ export default function Login() {
         throw new Error(data.message || 'Login failed');
       }
 
+      console.log("Login response:", data);
+
+      // Store restaurant ID in localStorage if user is a restaurant
+      if (data.user.role === 'restaurant') {
+        localStorage.setItem('restaurantId', data.user.id.toString());
+      }
+
       // Show success message
       toast.success('Login successful');
-      
-      // Always redirect to home page
-      router.push('/');
-      window.location.reload();
+
+      // Wait for cookies to be set
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Redirect based on user role
+      const redirectPath = data.user.role === 'admin' 
+        ? '/dashboard/admin/restaurants'
+        : data.user.role === 'restaurant'
+          ? '/dashboard/restaurant'
+          : '/';
+
+      // Use replace instead of push to avoid back button issues
+      router.replace(redirectPath);
     } catch (error) {
+      console.error('Login error:', error);
       if (axios.isAxiosError(error)) {
         const errorResponse = error.response?.data;
         const status = error.response?.status;
@@ -175,18 +194,32 @@ export default function Login() {
 
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <Input 
-                  id="password" 
-                  type="password" 
-                  name="password" 
-                  value={password} 
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    setErrors(prev => ({ ...prev, password: '' }));
-                  }}
-                  placeholder="Enter your password" 
-                  disabled={loading}
-                />
+                <div className="relative">
+                  <Input 
+                    id="password" 
+                    type={showPassword ? 'text' : 'password'} 
+                    name="password" 
+                    value={password} 
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      setErrors(prev => ({ ...prev, password: '' }));
+                    }}
+                    placeholder="Enter your password" 
+                    className={`${errors.password ? 'border-red-500' : ''} pr-10`}
+                    disabled={loading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
                 {errors.password && (
                   <p className="text-red-500 text-sm mt-1">{errors.password}</p>
                 )}

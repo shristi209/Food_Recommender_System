@@ -1,115 +1,102 @@
-// Define cuisine (dishes) and category (cuisine types) mappings
-export const CUISINES = {
-  // Nepali dishes (categoryId: 1)
-  MOMO: 1,
-  CHOWMIN: 2,
-  // Italian dishes (categoryId: 2)
-  PIZZA: 3,
-  PASTA: 4,
-  // Chinese dishes (categoryId: 3)
-  SUSHI: 5,
-  DUMPLINGS: 6,
-  // Indian dishes (categoryId: 4)
-  BUTTER_CHICKEN: 7,
-  BIRYANI: 8
-} as const;
+// Constants for vector dimensions
+const CUISINE_COUNT = 8;  // Momo to Biryani
+const CATEGORY_COUNT = 4; // Nepali, Italian, Chinese, Indian
+const SPICY_LEVELS = 6;   // 0 to 5
+const VECTOR_SIZE = CUISINE_COUNT + CATEGORY_COUNT + SPICY_LEVELS + 1; // +1 for veg/non-veg
 
-export const CATEGORIES = {
-  NEPALI: 1,
-  ITALIAN: 2,
-  CHINESE: 3,
-  INDIAN: 4
-} as const;
-
-// Get total counts for vector sizing
-const CUISINE_COUNT = Object.keys(CUISINES).length; // 8 dishes
-const CATEGORY_COUNT = Object.keys(CATEGORIES).length; // 4 cuisine types
-
-// Helper function to get category for a cuisine
-function getCategoryForCuisine(cuisineId: number): number {
-  // Map cuisine IDs to their respective categories
-  if (cuisineId <= 2) return CATEGORIES.NEPALI;
-  if (cuisineId <= 4) return CATEGORIES.ITALIAN;
-  if (cuisineId <= 6) return CATEGORIES.CHINESE;
-  return CATEGORIES.INDIAN;
-}
-
-// Convert menu item properties to a binary feature vector using one-hot encoding
-export function createMenuItemVector(item: {
+interface MenuItemVector {
   cuisineId: number;
   categoryId: number;
   spicyLevel: number;
-  isVeg: boolean;
-}) {
+  isVeg: number;
+}
+
+interface UserPreferences {
+  cuisinePreference: number[];
+  categoryPreference: number[];
+  spicyPreference: number;
+  vegPreference: boolean;
+}
+
+/**
+ * Creates a binary feature vector for a menu item
+ * Vector structure: [cuisine(8), category(4), spicyLevel(6), isVeg(1)]
+ */
+export function createMenuItemVector(item: MenuItemVector): number[] {
   // Initialize vector with zeros
-  const vector = new Array(CUISINE_COUNT + CATEGORY_COUNT + 7).fill(0);
-
-  // One-hot encoding for cuisine (dish) (first CUISINE_COUNT positions)
-  vector[item.cuisineId - 1] = 1;
-
-  // One-hot encoding for category (cuisine type) (next CATEGORY_COUNT positions)
-  vector[CUISINE_COUNT + (item.categoryId - 1)] = 1;
-
-  // Spicy level encoding (next 6 positions, 0-5)
-  vector[CUISINE_COUNT + CATEGORY_COUNT + item.spicyLevel] = 1;
-
-  // Vegetarian encoding (last position)
-  vector[vector.length - 1] = item.isVeg ? 1 : 0;
-
+  const vector = new Array(VECTOR_SIZE).fill(0);
+  
+  // Cuisine one-hot encoding (positions 0-7)
+  if (item.cuisineId >= 1 && item.cuisineId <= CUISINE_COUNT) {
+    vector[item.cuisineId - 1] = 1;
+  }
+  
+  // Category one-hot encoding (positions 8-11)
+  if (item.categoryId >= 1 && item.categoryId <= CATEGORY_COUNT) {
+    vector[CUISINE_COUNT + (item.categoryId - 1)] = 1;
+  }
+  
+  // Spicy level one-hot encoding (positions 12-17)
+  const spicyLevel = Math.min(Math.max(item.spicyLevel, 0), 5); // Ensure value is between 0-5
+  vector[CUISINE_COUNT + CATEGORY_COUNT + spicyLevel] = 1;
+  
+  // Vegetarian encoding (position 18)
+  vector[VECTOR_SIZE - 1] = item.isVeg === 1 ? 1 : 0;
+  
   return vector;
 }
 
-// Convert user interaction to a feature vector
-export function createUserInteractionVector(interaction: {
-  viewDuration?: number;
-  addToCart?: boolean;
-  spicyPreference?: number;
-  vegPreference?: boolean;
-  cuisinePreference?: number[]; // IDs of preferred dishes
-  categoryPreference?: number[]; // IDs of preferred cuisine types
-}) {
+/**
+ * Creates a feature vector for user preferences
+ * Vector structure matches menu item vector for comparison
+ */
+export function createUserInteractionVector(preferences: UserPreferences): number[] {
   // Initialize vector with zeros
-  const vector = new Array(CUISINE_COUNT + CATEGORY_COUNT + 7).fill(0);
-
-  // One-hot encoding for cuisine preferences (dishes)
-  if (interaction.cuisinePreference?.length) {
-    interaction.cuisinePreference.forEach(id => {
-      vector[id - 1] = 1;
-    });
-  }
-
-  // One-hot encoding for category preferences (cuisine types)
-  if (interaction.categoryPreference?.length) {
-    interaction.categoryPreference.forEach(id => {
-      vector[CUISINE_COUNT + (id - 1)] = 1;
-    });
-  }
-
-  // Spicy preference (0-5)
-  if (interaction.spicyPreference !== undefined) {
-    vector[CUISINE_COUNT + CATEGORY_COUNT + interaction.spicyPreference] = 1;
-  }
-
+  const vector = new Array(VECTOR_SIZE).fill(0);
+  
+  // Cuisine preferences (can have multiple 1s)
+  preferences.cuisinePreference.forEach(cuisineId => {
+    if (cuisineId >= 1 && cuisineId <= CUISINE_COUNT) {
+      vector[cuisineId - 1] = 1;
+    }
+  });
+  
+  // Category preferences (can have multiple 1s)
+  preferences.categoryPreference.forEach(categoryId => {
+    if (categoryId >= 1 && categoryId <= CATEGORY_COUNT) {
+      vector[CUISINE_COUNT + (categoryId - 1)] = 1;
+    }
+  });
+  
+  // Spicy level preference (one-hot encoding)
+  const spicyLevel = Math.min(Math.max(Math.round(preferences.spicyPreference), 0), 5);
+  vector[CUISINE_COUNT + CATEGORY_COUNT + spicyLevel] = 1;
+  
   // Vegetarian preference
-  if (interaction.vegPreference !== undefined) {
-    vector[vector.length - 1] = interaction.vegPreference ? 1 : 0;
-  }
-
+  vector[VECTOR_SIZE - 1] = preferences.vegPreference ? 1 : 0;
+  
   return vector;
 }
 
-// Calculate cosine similarity between two vectors
+/**
+ * Calculates the cosine similarity between two vectors
+ * Returns a value between -1 and 1, where 1 means most similar
+ */
 export function cosineSimilarity(vector1: number[], vector2: number[]): number {
   if (vector1.length !== vector2.length) {
-    throw new Error('Vectors must be of equal length');
+    throw new Error(`Vectors must be of equal length. Got ${vector1.length} and ${vector2.length}`);
   }
 
   const dotProduct = vector1.reduce((acc, val, i) => acc + val * vector2[i], 0);
   const magnitude1 = Math.sqrt(vector1.reduce((acc, val) => acc + val * val, 0));
   const magnitude2 = Math.sqrt(vector2.reduce((acc, val) => acc + val * val, 0));
 
-  if (magnitude1 === 0 || magnitude2 === 0) return 0;
-  return dotProduct / (magnitude1 * magnitude2);
+  if (magnitude1 === 0 || magnitude2 === 0) {
+    return 0;
+  }
+
+  const similarity = dotProduct / (magnitude1 * magnitude2);
+  return Math.max(-1, Math.min(1, similarity)); // Ensure result is between -1 and 1
 }
 
 // Find similar items based on cosine similarity

@@ -4,11 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
   HomeIcon, 
-  ClipboardDocumentListIcon,
   Cog6ToothIcon,
-  UserGroupIcon,
   BuildingStorefrontIcon,
-  ChartPieIcon,
   Bars3Icon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
@@ -24,7 +21,7 @@ interface SidebarItem {
 const adminNavItems: SidebarItem[] = [
   { name: 'Dashboard', href: '/dashboard/admin', icon: HomeIcon },
   { name: 'Restaurants', href: '/dashboard/admin/restaurants', icon: BuildingStorefrontIcon },
-  { name: 'Users', href: '/dashboard/admin/users', icon: UserGroupIcon },
+  // { name: 'Users', href: '/dashboard/admin/users', icon: UserGroupIcon },
   // { name: 'Settings', href: '/dashboard/admin/settings', icon: Cog6ToothIcon },
 ];
 
@@ -32,7 +29,6 @@ const restaurantNavItems: SidebarItem[] = [
   { name: 'Dashboard', href: '/dashboard/restaurant', icon: HomeIcon },
   { name: 'Add Items', href: '/dashboard/restaurant/menu', icon: BuildingStorefrontIcon },
   { name: 'View Items', href: '/dashboard/restaurant/viewmenu', icon: Cog6ToothIcon },
-  { name: 'Edit Items', href: '/dashboard/restaurant/editmenu', icon: Cog6ToothIcon },
 ];
 
 interface DashboardLayoutProps {

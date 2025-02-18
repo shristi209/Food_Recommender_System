@@ -1,0 +1,48 @@
+import { NextResponse } from 'next/server';
+import { getDbPool } from '@/lib/database';
+
+export async function POST(request: Request) {
+  const db = await getDbPool();
+  
+  try {
+    const { userId, cuisineId, categoryId, spicyLevel, isVeg } = await request.json();
+
+    if (!userId || !cuisineId || !categoryId || !spicyLevel) {
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    // Save user preferences
+    await db.execute(
+      `INSERT INTO user_preferences 
+       (userId, preferredCuisineId, preferredCategoryId, spicyPreference, vegPreference) 
+       VALUES (?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+       preferredCuisineId = VALUES(preferredCuisineId),
+       preferredCategoryId = VALUES(preferredCategoryId),
+       spicyPreference = VALUES(spicyPreference),
+       vegPreference = VALUES(vegPreference)`,
+      [userId, cuisineId, categoryId, spicyLevel, isVeg]
+    );
+
+    // Add this as an interaction to avoid cold start
+    await db.execute(
+      `INSERT INTO user_interactions 
+       (userId, interactionType, viewCount)
+       VALUES (?, 'preference_set', 1)
+       ON DUPLICATE KEY UPDATE
+       viewCount = viewCount + 1`,
+      [userId]
+    );
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Failed to save user preferences:', error);
+    return NextResponse.json(
+      { error: 'Failed to save preferences' },
+      { status: 500 }
+    );
+  }
+}

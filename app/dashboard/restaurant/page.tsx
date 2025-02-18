@@ -26,109 +26,111 @@ interface RecentOrder {
 }
 
 export default function RestaurantDashboard() {
-  const [stats, setStats] = useState<StatsCard[]>([
-    {
-      name: 'Today\'s Orders',
-      value: '24',
-      icon: ClipboardDocumentListIcon,
-      change: '+12.5%',
-      trend: 'up',
-    },
-    {
-      name: 'Today\'s Revenue',
-      value: '$1,435',
-      icon: CurrencyDollarIcon,
-      change: '+8.2%',
-      trend: 'up',
-    },
-    {
-      name: 'Active Customers',
-      value: '156',
-      icon: UserIcon,
-      change: '+3.1%',
-      trend: 'up',
-    },
-    {
-      name: 'Average Rating',
-      value: '4.8',
-      icon: StarIcon,
-      change: '+0.3',
-      trend: 'up',
-    },
-  ]);
+  const [stats, setStats] = useState<StatsCard[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([
-    {
-      id: '#12345',
-      customer: 'John Doe',
-      items: ['Chicken Burger', 'Fries', 'Coke'],
-      total: '$25.99',
-      status: 'pending',
-      time: '5 mins ago',
-    },
-    {
-      id: '#12344',
-      customer: 'Jane Smith',
-      items: ['Veggie Pizza', 'Salad'],
-      total: '$32.50',
-      status: 'preparing',
-      time: '15 mins ago',
-    },
-    {
-      id: '#12343',
-      customer: 'Mike Johnson',
-      items: ['Pasta Alfredo', 'Garlic Bread', 'Tiramisu'],
-      total: '$45.00',
-      status: 'ready',
-      time: '25 mins ago',
-    },
-  ]);
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const response = await fetch('/api/restaurant/stats');
+        const data = await response.json();
+
+        setStats([
+          {
+            name: 'Today\'s Active Users',
+            value: data.todayOrders.count.toString(),
+            icon: UserIcon,
+            change: `${data.todayOrders.change}%`,
+            trend: data.todayOrders.trend,
+          },
+          {
+            name: 'Today\'s Cart Adds',
+            value: data.todayRevenue.amount.toString(),
+            icon: ClipboardDocumentListIcon,
+            change: `${data.todayRevenue.change}%`,
+            trend: data.todayRevenue.trend,
+          },
+          {
+            name: 'Total Tracking Users',
+            value: data.trackingUsers.count.toString(),
+            icon: UserIcon,
+            change: data.trackingUsers.change,
+            trend: data.trackingUsers.trend,
+          },
+          {
+            name: 'Items in Cart',
+            value: data.cartItems.count.toString(),
+            icon: StarIcon,
+            change: data.cartItems.change,
+            trend: data.cartItems.trend,
+          },
+        ]);
+      } catch (error) {
+        console.error('Failed to fetch stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchStats();
+  }, []);
+
 
   return (
     <div>
       <div className="mb-8">
         <h1 className="text-2xl font-semibold text-gray-900">Restaurant Dashboard</h1>
         <p className="mt-2 text-sm text-gray-700">
-          Overview of your restaurant's performance and recent orders
+          Overview of your restaurant's performance and customer engagement
         </p>
       </div>
 
       {/* Stats Grid */}
       <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
-          <div
-            key={stat.name}
-            className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6"
-          >
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <stat.icon className="h-6 w-6 text-gray-400" aria-hidden="true" />
+        {loading ? (
+          // Loading skeleton
+          [...Array(4)].map((_, i) => (
+            <div key={i} className="animate-pulse overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
+              <div className="h-8 w-3/4 bg-gray-200 rounded"></div>
+              <div className="mt-4 h-6 w-1/2 bg-gray-200 rounded"></div>
+            </div>
+          ))
+        ) : (
+          stats.map((stat) => (
+            <div
+              key={stat.name}
+              className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6"
+            >
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <stat.icon className="h-6 w-6 text-gray-400" aria-hidden="true" />
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="truncate text-sm font-medium text-gray-500">{stat.name}</dt>
+                    <dd>
+                      <div className="text-lg font-medium text-gray-900">{stat.value}</div>
+                    </dd>
+                  </dl>
+                </div>
               </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="truncate text-sm font-medium text-gray-500">{stat.name}</dt>
-                  <dd>
-                    <div className="text-lg font-medium text-gray-900">{stat.value}</div>
-                  </dd>
-                </dl>
+              <div className="mt-4">
+                <span
+                  className={`inline-flex items-baseline text-sm font-semibold ${
+                    stat.trend === 'up' ? 'text-green-600' : 'text-red-600'
+                  }`}
+                >
+                  {stat.change}
+                </span>
+                <span className="ml-2 text-sm text-gray-500">from yesterday</span>
               </div>
             </div>
-            <div className="mt-4">
-              <span
-                className={`inline-flex items-baseline text-sm font-semibold ${
-                  stat.trend === 'up' ? 'text-green-600' : 'text-red-600'
-                }`}
-              >
-                {stat.change}
-              </span>
-              <span className="ml-2 text-sm text-gray-500">from yesterday</span>
-            </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
 
       {/* Recent Orders */}
-      <div className="mt-8">
+      {/* <div className="mt-8">
         <h2 className="text-lg font-medium text-gray-900">Recent Orders</h2>
         <div className="mt-4 overflow-hidden rounded-lg bg-white shadow">
           <ul role="list" className="divide-y divide-gray-200">
@@ -170,7 +172,7 @@ export default function RestaurantDashboard() {
             ))}
           </ul>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 }

@@ -18,57 +18,82 @@ export async function GET(request: NextRequest) {
     yesterday.setDate(yesterday.getDate() - 1);
     
     // Get statistics
-    const [todayOrdersResult] = await pool.execute(
-      'SELECT COUNT(*) as count, SUM(totalAmount) as revenue FROM Orders WHERE restaurantId = ? AND createdAt >= ?',
-      [restaurant.id, today.toISOString()]
-    );
-    
-    const [yesterdayOrdersResult] = await pool.execute(
-      'SELECT COUNT(*) as count, SUM(totalAmount) as revenue FROM Orders WHERE restaurantId = ? AND createdAt >= ? AND createdAt < ?',
-      [restaurant.id, yesterday.toISOString(), today.toISOString()]
-    );
-    
-    const [activeCustomersResult] = await pool.execute(
+    const [trackingUsersResult] = await pool.execute(
       `SELECT COUNT(DISTINCT userId) as count 
-       FROM Orders 
-       WHERE restaurantId = ? 
-       AND createdAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)`,
+       FROM user_interactions ui
+       JOIN menu_items mi ON ui.menuItemId = mi.id
+       WHERE mi.restaurantId = ? 
+       AND (ui.viewCount > 0 OR ui.searchCount > 0)`,
       [restaurant.id]
     );
-    
-    const [ratingResult] = await pool.execute(
-      'SELECT AVG(rating) as average FROM Reviews WHERE restaurantId = ?',
+
+    const [cartItemsResult] = await pool.execute(
+      `SELECT COUNT(*) as count 
+       FROM user_interactions ui
+       JOIN menu_items mi ON ui.menuItemId = mi.id
+       WHERE mi.restaurantId = ? 
+       AND ui.cartAddCount > 0`,
       [restaurant.id]
     );
-    
-    const todayStats = (todayOrdersResult as any[])[0];
-    const yesterdayStats = (yesterdayOrdersResult as any[])[0];
-    const activeCustomers = (activeCustomersResult as any[])[0];
-    const rating = (ratingResult as any[])[0];
-    
+
+    // Get today's interactions
+    const [todayInteractionsResult] = await pool.execute(
+      `SELECT 
+         COUNT(DISTINCT ui.userId) as userCount,
+         SUM(ui.cartAddCount) as cartAdds
+       FROM user_interactions ui
+       JOIN menu_items mi ON ui.menuItemId = mi.id
+       WHERE mi.restaurantId = ? 
+       AND DATE(ui.lastInteractionAt) = CURDATE()`,
+      [restaurant.id]
+    );
+
+    // Get yesterday's interactions
+    const [yesterdayInteractionsResult] = await pool.execute(
+      `SELECT 
+         COUNT(DISTINCT ui.userId) as userCount,
+         SUM(ui.cartAddCount) as cartAdds
+       FROM user_interactions ui
+       JOIN menu_items mi ON ui.menuItemId = mi.id
+       WHERE mi.restaurantId = ? 
+       AND DATE(ui.lastInteractionAt) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)`,
+      [restaurant.id]
+    );
+
+    const todayStats = (todayInteractionsResult as any[])[0];
+    const yesterdayStats = (yesterdayInteractionsResult as any[])[0];
+    const trackingUsers = (trackingUsersResult as any[])[0];
+    const cartItems = (cartItemsResult as any[])[0];
+
     // Calculate percentage changes
-    const orderChange = yesterdayStats.count > 0 
-      ? ((todayStats.count - yesterdayStats.count) / yesterdayStats.count) * 100 
+    const userChange = yesterdayStats.userCount > 0 
+      ? ((todayStats.userCount - yesterdayStats.userCount) / yesterdayStats.userCount) * 100 
       : 0;
-      
-    const revenueChange = yesterdayStats.revenue > 0 
-      ? ((todayStats.revenue - yesterdayStats.revenue) / yesterdayStats.revenue) * 100 
+
+    const cartChange = yesterdayStats.cartAdds > 0
+      ? ((todayStats.cartAdds - yesterdayStats.cartAdds) / yesterdayStats.cartAdds) * 100
       : 0;
     
     return NextResponse.json({
-      orders: {
-        today: todayStats.count || 0,
-        change: orderChange.toFixed(1)
+      todayOrders: {
+        count: todayStats.userCount || 0,
+        change: userChange.toFixed(1),
+        trend: userChange >= 0 ? 'up' : 'down'
       },
-      revenue: {
-        today: todayStats.revenue || 0,
-        change: revenueChange.toFixed(1)
+      todayRevenue: {
+        amount: todayStats.cartAdds || 0,
+        change: cartChange.toFixed(1),
+        trend: cartChange >= 0 ? 'up' : 'down'
       },
-      activeCustomers: {
-        count: activeCustomers.count || 0
+      trackingUsers: {
+        count: trackingUsers.count || 0,
+        change: '+0',
+        trend: 'up'
       },
-      rating: {
-        average: rating.average ? parseFloat(rating.average).toFixed(1) : '0.0'
+      cartItems: {
+        count: cartItems.count || 0,
+        change: '+0',
+        trend: 'up'
       }
     });
     
