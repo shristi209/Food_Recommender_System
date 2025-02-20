@@ -104,14 +104,13 @@ export default function Home() {
     const checkUserInteractions = async () => {
       if (user?.id) {
         try {
-          const response = await fetch(`/api/interactions/count?userId=${user.id}`);
+          const response = await fetch(`/api/user-interactions?userId=${user.id}`);
           const data = await response.json();
-          const hasInteractions = data.totalInteractions > 0;
-          setHasInteractions(hasInteractions);
+          setHasInteractions(data.hasInteractions);
           setHasCheckedInteractions(true);
           
           // Only show preferences if user has no interactions
-          setShowPreferences(!hasInteractions);
+          setShowPreferences(!data.hasInteractions);
         } catch (error) {
           console.error('Failed to fetch user interactions:', error);
           setHasInteractions(false);
@@ -432,6 +431,7 @@ export default function Home() {
           onClose={handlePreferenceClose}
           onSave={handlePreferenceSave}
           cuisines={cuisines}
+          userId={user?.id}
         />
         {/* Recommendations Section */}
         {hasInteractions && recommendations && (

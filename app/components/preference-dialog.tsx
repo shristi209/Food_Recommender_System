@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectLabel, SelectGroup } from '@/components/ui/select';
@@ -23,6 +23,7 @@ interface PreferenceDialogProps {
     categoryId: number;
     categoryName: string;
   }>;
+  userId?: string;
 }
 
 export function PreferenceDialog({
@@ -30,10 +31,12 @@ export function PreferenceDialog({
   onClose,
   onSave,
   cuisines,
+  userId,
 }: PreferenceDialogProps) {
   const [selectedCuisine, setSelectedCuisine] = useState('');
   const [spicyLevel, setSpicyLevel] = useState(2);
   const [isVeg, setIsVeg] = useState<boolean | null>(null);
+  const [shouldShow, setShouldShow] = useState(open);
 
   // Group cuisines by category
   const groupedCuisines = cuisines.reduce((acc, cuisine) => {
@@ -44,6 +47,30 @@ export function PreferenceDialog({
     acc[category].push(cuisine);
     return acc;
   }, {} as Record<string, typeof cuisines>);
+
+  // Check for existing interactions when dialog opens
+  useEffect(() => {
+    if (open && userId) {
+      checkExistingInteractions();
+    }
+    setShouldShow(open);
+  }, [open, userId]);
+
+  const checkExistingInteractions = async () => {
+    try {
+      const response = await fetch(`/api/user-interactions?userId=${userId}`);
+      const data = await response.json();
+      
+      if (data.hasInteractions) {
+        onClose();
+        setShouldShow(false);
+      }
+    } catch (error) {
+      console.error('Failed to check user interactions:', error);
+    }
+  };
+
+  if (!shouldShow) return null;
 
   const handleSave = () => {
     if (!selectedCuisine || isVeg === null) {

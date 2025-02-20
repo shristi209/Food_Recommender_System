@@ -30,10 +30,10 @@ export async function POST(request: Request) {
     // Add this as an interaction to avoid cold start
     await db.execute(
       `INSERT INTO user_interactions 
-       (userId, interactionType, viewCount)
-       VALUES (?, 'preference_set', 1)
+       (userId, menuItemId, preferenceScore)
+       VALUES (?, 1, 1)
        ON DUPLICATE KEY UPDATE
-       viewCount = viewCount + 1`,
+       preferenceScore = VALUES(preferenceScore)`,
       [userId]
     );
 

@@ -37,7 +37,7 @@ export default function RestaurantsPage() {
       }
       const data = await response.json();
       
-      setRestaurants(data.restaurants);
+      setRestaurants(data);
     } catch (error) {
       console.error('Failed to fetch restaurants:', error);
       toast({
