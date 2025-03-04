@@ -1,3 +1,4 @@
+//user has interactions or not, check this
 import { NextResponse } from 'next/server';
 import { getDbPool } from '@/lib/database';
 

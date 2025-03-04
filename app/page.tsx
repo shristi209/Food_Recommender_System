@@ -4,16 +4,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
-import { Utensils, ShoppingCart, User, Plus, Minus, Eye, Search, MapPin, Phone, Star } from 'lucide-react';
+import {  ShoppingCart, Eye, MapPin, Phone, Star } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { CartItem } from './types';
 import { useAuth } from '@/contexts/auth-context';
-import { ThemeToggle } from './components/theme-toggle';
+// import { ThemeToggle } from './components/theme-toggle';
 import { useRouter } from "next/navigation";
 import { useToast } from '@/hooks/use-toast';
-import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Input } from '@/components/ui/input';
+// import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+// import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { MainNav } from './components/main-nav';
 import { useInteractions } from '@/hooks/use-interactions';
@@ -70,31 +70,38 @@ interface RecommendationsData {
 export default function Home() {
   const { isAuthenticated, user, logout } = useAuth();
   const { trackView, trackCartAdd, trackSearch } = useInteractions();
-  console.log("user...", user);
-  console.log("isAuthenticated...", isAuthenticated);
 
+  //core data
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [recommendations, setRecommendations] = useState<RecommendationsData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
-  const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
-  const [lastTrackedQuery, setLastTrackedQuery] = useState('');
-  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
-  const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
-  const [restaurantMenuItems, setRestaurantMenuItems] = useState<MenuItem[]>([]);
-  const [loadingRestaurant, setLoadingRestaurant] = useState(false);
-  const [hasInteractions, setHasInteractions] = useState(false);
-  const [hasCheckedInteractions, setHasCheckedInteractions] = useState(false);
-  const [showPreferences, setShowPreferences] = useState(false);
   const [cuisines, setCuisines] = useState<Array<{ 
     id: number; 
     name: string; 
     categoryId: number;
     categoryName: string;
   }>>([]);
+  
+  //ui states
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+  const router = useRouter();
+
+  //search management
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  //Used to prevent duplicate tracking of the same search query, 30 sec delay before tracking search interactions
+  const [lastTrackedQuery, setLastTrackedQuery] = useState('');
+  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
+  const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
+  const [restaurantMenuItems, setRestaurantMenuItems] = useState<MenuItem[]>([]);
+  const [loadingRestaurant, setLoadingRestaurant] = useState(false);
+
+  //Indicates if the user has any previous interactions with menu items, to show dialog boxes
+  const [hasInteractions, setHasInteractions] = useState(false);
+  const [hasCheckedInteractions, setHasCheckedInteractions] = useState(false);
+  const [showPreferences, setShowPreferences] = useState(false);
 
   useEffect(() => {
     fetchMenuItems();
@@ -108,7 +115,7 @@ export default function Home() {
           const data = await response.json();
           setHasInteractions(data.hasInteractions);
           setHasCheckedInteractions(true);
-          
+
           // Only show preferences if user has no interactions
           setShowPreferences(!data.hasInteractions);
         } catch (error) {
@@ -315,6 +322,7 @@ export default function Home() {
     };
   }, [searchTimeout]);
 
+
   const handleViewDetails = (item: MenuItem) => {
     setSelectedItem(item);
     // Track view interaction
@@ -364,6 +372,7 @@ export default function Home() {
     setShowPreferences(false);
   };
 
+  //save new users preferences.
   const handlePreferenceSave = async (preferences: {
     cuisineId: string;
     categoryId: string;
@@ -471,7 +480,7 @@ export default function Home() {
                       </div>
                     </div>
                   )}
-                  
+
                   {/* Rank Badge */}
                   <div className="absolute top-2 left-2 z-10 bg-black bg-opacity-70 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">
                     #{index + 1}

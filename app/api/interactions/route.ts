@@ -1,15 +1,26 @@
+//input user interaction, with the updated preference score, after tracking from use_interactions hooks. 
+//use-interactions hooks capture the tracked data and sent to here
+import mysql, { RowDataPacket } from 'mysql2/promise';
 import { NextResponse } from 'next/server';
 import { getDbPool } from '@/lib/database';
 import { verifyAuth } from '@/lib/auth';
 import { INTERACTION_WEIGHTS } from '@/utils/interactionWeights';
 import { NextRequest } from 'next/server';
 
+interface UserInteraction extends RowDataPacket {
+  viewCount: number;
+  cartAddCount: number;
+  searchCount: number;
+  lastInteractionAt: string | Date;
+  preferenceScore: number;
+}
+
 const calculatePreferenceScore = (
   viewCount: number,
   cartAddCount: number,
   searchCount: number,
   lastInteractionAt: Date,
-  weight: number = 1
+  weight: number = 1    //initial weight
 ) => {
   // Time decay factor - interactions become less important over time
   const now = new Date();
@@ -37,7 +48,8 @@ export async function POST(req: NextRequest) {
       );
     }
     const userId = decoded.id;
-
+    
+//receives data from the use-interactions hook
     const body = await req.json();
     const { menuItemId, interactionType, weight = 1, metadata = {} } = body;
 
@@ -63,12 +75,12 @@ export async function POST(req: NextRequest) {
         [menuItemId]
       );
 
-      if (!menuItems?.length) {
-        return NextResponse.json(
-          { error: 'Menu item not found' },
-          { status: 404 }
-        );
-      }
+      // if (!menuItems.recordset.length) {
+      //   return NextResponse.json(
+      //     { error: 'Menu item not found' },
+      //     { status: 404 }
+      //   );
+      // }
 
       // Calculate initial preference score with the specific weight
       const initialPreferenceScore = weight * INTERACTION_WEIGHTS[
@@ -93,14 +105,14 @@ export async function POST(req: NextRequest) {
       );
 
       // Get updated counts to calculate new preference score
-      const [rows] = await db.query(
-        `SELECT viewCount, cartAddCount, searchCount, lastInteractionAt
+      const [rows] = await db.query<UserInteraction[]>(
+        `SELECT viewCount, cartAddCount, searchCount, lastInteractionAt, preferenceScore
          FROM user_interactions
          WHERE userId = ? AND menuItemId = ?`,
         [userId, menuItemId]
       );
 
-      if (rows?.length > 0) {
+      if (rows.length > 0) {
         const interaction = rows[0];
         console.log('Updated interaction counts:', interaction);
 
@@ -151,43 +163,43 @@ export async function POST(req: NextRequest) {
 }
 
 // GET /api/interactions/recommendations - Get personalized recommendations
-export async function GET(req: NextRequest) {
-  const db = await getDbPool();
-  try {
-    const decoded = verifyAuth(req);
-    const userId = decoded.id;
+// export async function GET(req: NextRequest) {
+//   const db = await getDbPool();
+//   try {
+//     const decoded = verifyAuth(req);
+//     const userId = decoded.id;
 
-    // Get user's interactions with preference scores
-    const [interactions] = await db.query(
-      `SELECT menuItemId, preferenceScore
-       FROM user_interactions
-       WHERE userId = ?
-       ORDER BY preferenceScore DESC
-       LIMIT 10`,
-      [userId]
-    );
+//     // Get user's interactions with preference scores
+//     const [interactions] = await db.query(
+//       `SELECT menuItemId, preferenceScore
+//        FROM user_interactions
+//        WHERE userId = ?
+//        ORDER BY preferenceScore DESC
+//        LIMIT 10`,
+//       [userId]
+//     );
 
-    // Get menu items for these interactions
-    const menuItemIds = interactions.map((i: any) => i.menuItemId);
-    if (menuItemIds.length === 0) {
-      return NextResponse.json({ recommendations: [] });
-    }
+//     // Get menu items for these interactions
+//     const menuItemIds = interactions.map((i: any) => i.menuItemId);
+//     if (menuItemIds.length === 0) {
+//       return NextResponse.json({ recommendations: [] });
+//     }
 
-    const [menuItems] = await db.query(
-      `SELECT * FROM menu_items 
-       WHERE id IN (?)`,
-      [menuItemIds]
-    );
+//     const [menuItems] = await db.query(
+//       `SELECT * FROM menu_items 
+//        WHERE id IN (?)`,
+//       [menuItemIds]
+//     );
 
-    return NextResponse.json({ 
-      recommendations: menuItems 
-    });
+//     return NextResponse.json({ 
+//       recommendations: menuItems 
+//     });
 
-  } catch (error) {
-    console.error('Error getting recommendations:', error);
-    return NextResponse.json(
-      { error: 'Failed to get recommendations' },
-      { status: 500 }
-    );
-  }
-}
+//   } catch (error) {
+//     console.error('Error getting recommendations:', error);
+//     return NextResponse.json(
+//       { error: 'Failed to get recommendations' },
+//       { status: 500 }
+//     );
+//   }
+// }

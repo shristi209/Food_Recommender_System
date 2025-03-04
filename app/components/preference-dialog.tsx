@@ -1,3 +1,5 @@
+//this is the modal component responsible to catch all the user filled data and save, 
+//also check if user_hasinteractions or not and close the modal accordingly
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -39,14 +41,13 @@ export function PreferenceDialog({
   const [shouldShow, setShouldShow] = useState(open);
 
   // Group cuisines by category
-  const groupedCuisines = cuisines.reduce((acc, cuisine) => {
+  const groupedCuisines = cuisines?.reduce<Record<string, typeof cuisines>>((acc, cuisine) => {
+    if (!cuisine) return acc;
     const category = cuisine.categoryName || 'Other';
-    if (!acc[category]) {
-      acc[category] = [];
-    }
+    acc[category] = acc[category] || [];
     acc[category].push(cuisine);
     return acc;
-  }, {} as Record<string, typeof cuisines>);
+  }, {}) || {};
 
   // Check for existing interactions when dialog opens
   useEffect(() => {

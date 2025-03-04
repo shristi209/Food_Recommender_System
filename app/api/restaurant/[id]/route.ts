@@ -14,7 +14,7 @@ export async function GET(
       `SELECT * FROM restaurants WHERE id = ?`,
       [params.id]
     );
-    console.log("Restaurant check:", restaurantCheck);
+    // console.log("Restaurant check:", restaurantCheck);
 
     // Fetch restaurant details
     const [restaurants] = await pool.execute(
@@ -39,7 +39,7 @@ export async function GET(
       WHERE r.id = ? AND r.status = "approved"`,
       [params.id]
     );
-    console.log("restaurants............",restaurants);
+    // console.log("restaurants............",restaurants);
 
     if (!Array.isArray(restaurants) || restaurants.length === 0) {
       return NextResponse.json(

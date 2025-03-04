@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
       cuisineId: numericCuisineId,
       categoryId: numericCategoryId,
       spicyLevel: numericSpicyLevel,
-      isVeg: Boolean(isVeg)
+      isVeg: Number(isVeg)
     });
 
     const pool = await getDbPool();

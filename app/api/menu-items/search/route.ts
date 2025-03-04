@@ -77,17 +77,17 @@ export async function GET(req: NextRequest) {
     );
 
     // Ensure all fields are properly formatted
-    const formattedResults = results.map((item: any) => ({
-      ...item,
-      isVeg: Boolean(item.isVeg),
-      spicyLevel: Number(item.spicyLevel),
-      price: Number(item.price),
-      ingredients: item.ingredients || '',
-      address: item.address || '',
-      phone: item.phone || '',
-    }));
+    // const formattedResults = results.map((item: any) => ({
+    //   ...item,
+    //   isVeg: Boolean(item.isVeg),
+    //   spicyLevel: Number(item.spicyLevel),
+    //   price: Number(item.price),
+    //   ingredients: item.ingredients || '',
+    //   address: item.address || '',
+    //   phone: item.phone || '',
+    // }));
 
-    return NextResponse.json(formattedResults || []);
+    // return NextResponse.json(formattedResults || []);
   } catch (error) {
     console.error('Error searching menu items:', error);
     return new NextResponse('Internal Server Error', { status: 500 });

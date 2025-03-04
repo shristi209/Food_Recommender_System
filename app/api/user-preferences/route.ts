@@ -1,3 +1,4 @@
+//add user_preferences and add to user_interaction to avoid cold strat.
 import { NextResponse } from 'next/server';
 import { getDbPool } from '@/lib/database';
 
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
       [userId]
     );
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true });  
   } catch (error) {
     console.error('Failed to save user preferences:', error);
     return NextResponse.json(
