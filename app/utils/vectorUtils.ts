@@ -115,26 +115,3 @@ export async function findSimilarItems(
     .sort((a, b) => b.similarity - a.similarity)
     .slice(0, topK);
 }
-
-// Example vector structure:
-// [
-//   // Cuisine (dish) one-hot encoding (8 positions)
-//   1, 0, 0, 0, 0, 0, 0, 0,  // MOMO
-//   // or
-//   0, 0, 0, 0, 0, 0, 0, 1,  // BIRYANI
-//
-//   // Category (cuisine type) one-hot encoding (4 positions)
-//   1, 0, 0, 0,  // NEPALI
-//   // or
-//   0, 0, 0, 1,  // INDIAN
-//
-//   // Spicy level one-hot encoding (6 positions for 0-5)
-//   1, 0, 0, 0, 0, 0,  // Level 0
-//   // or
-//   0, 0, 0, 0, 1, 0,  // Level 4
-//
-//   // Vegetarian (1 position)
-//   1  // Is vegetarian
-//   // or
-//   0  // Not vegetarian
-// ]

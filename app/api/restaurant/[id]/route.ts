@@ -1,5 +1,22 @@
 import { getDbPool } from '@/lib/database';
 import { NextResponse } from 'next/server';
+import { RowDataPacket } from 'mysql2';
+
+interface RestaurantRow extends RowDataPacket {
+  id: string;
+  restaurantName: string;
+  address: string;
+  phone: string;
+  menuItemId: number | null;
+  menuItemName: string | null;
+  price: number | null;
+  picture: string | null;
+  spicyLevel: number | null;
+  isVeg: number | null;
+  ingredients: string | null;
+  cuisineName: string | null;
+  categoryName: string | null;
+}
 
 export async function GET(
   request: Request,
@@ -10,14 +27,14 @@ export async function GET(
     const pool = await getDbPool();
 
     // First check if restaurant exists
-    const [restaurantCheck] = await pool.execute(
+    const [restaurantCheck] = await pool.execute<RestaurantRow[]>(
       `SELECT * FROM restaurants WHERE id = ?`,
       [params.id]
     );
     // console.log("Restaurant check:", restaurantCheck);
 
     // Fetch restaurant details
-    const [restaurants] = await pool.execute(
+    const [restaurants] = await pool.execute<RestaurantRow[]>(
       `SELECT 
         r.id,
         r.restaurantName,
@@ -39,9 +56,8 @@ export async function GET(
       WHERE r.id = ? AND r.status = "approved"`,
       [params.id]
     );
-    // console.log("restaurants............",restaurants);
 
-    if (!Array.isArray(restaurants) || restaurants.length === 0) {
+    if (restaurants.length === 0) {
       return NextResponse.json(
         { error: 'Restaurant not found' },
         { status: 404 }

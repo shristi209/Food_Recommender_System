@@ -1,14 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { 
   UserGroupIcon, 
   BuildingStorefrontIcon,
   ClipboardDocumentListIcon,
   CurrencyDollarIcon 
 } from '@heroicons/react/24/outline';
-import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/auth-context';
 
 interface StatsCard {
   name: string;

@@ -19,6 +19,7 @@ export default function Checkout() {
       restaurantId: '1',
       quantity: 2,
       category: 'Main Course',
+      picture: 'https://images.unsplash.com/photo-1604382355076-af4b0eb60143',
       isVegetarian: true,
       containsAllergens: ['Milk', 'Wheat'],
     },

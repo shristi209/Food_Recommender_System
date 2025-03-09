@@ -1,3 +1,4 @@
+//Content-based filtering
 import { NextResponse } from 'next/server';
 import { RowDataPacket } from 'mysql2';
 import { getDbPool } from '@/lib/database';

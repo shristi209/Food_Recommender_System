@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useState, FormEvent } from 'react';
 import { UserRole } from '@/app/types';
 import { toast } from 'sonner';
@@ -43,7 +44,8 @@ export default function Register() {
     name: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    general: ''
   });
 
   // Add error state for restaurant form
@@ -56,8 +58,11 @@ export default function Register() {
     confirmPassword: '',
     panNumber: '',
     registrationCertificate: '',
-    panImage: ''
+    panImage: '',
+    general: ''
   });
+
+  const [loading, setLoading] = useState(false);
 
   const validateCustomerForm = () => {
     // Reset previous errors
@@ -65,7 +70,8 @@ export default function Register() {
       name: '',
       email: '',
       password: '',
-      confirmPassword: ''
+      confirmPassword: '',
+      general: ''
     };
     let isValid = true;
 
@@ -101,7 +107,8 @@ export default function Register() {
       confirmPassword: '',
       panNumber: '',
       registrationCertificate: '',
-      panImage: ''
+      panImage: '',
+      general: ''
     };
     let isValid = true;
 
@@ -148,10 +155,14 @@ export default function Register() {
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setLoading(true);
 
     try {
       if (role === 'customer') {
-        if (!validateCustomerForm()) return;
+        if (!validateCustomerForm()) {
+          setLoading(false);
+          return;
+        }
 
         try {
           const response = await axios.post('/api/auth/register', {
@@ -167,7 +178,10 @@ export default function Register() {
           handleRegistrationError(error);
         }
       } else if (role === 'restaurant') {
-        if (!validateRestaurantForm()) return;
+        if (!validateRestaurantForm()) {
+          setLoading(false);
+          return;
+        }
 
         // Check if passwords match
         if (restaurantPassword !== restaurantConfirmPassword) {
@@ -175,6 +189,7 @@ export default function Register() {
             ...prev,
             confirmPassword: 'Passwords do not match'
           }));
+          setLoading(false);
           return;
         }
 
@@ -209,6 +224,8 @@ export default function Register() {
     } catch (error) {
       console.error('Registration error:', error);
       toast.error('Failed to register. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -241,13 +258,28 @@ export default function Register() {
   );
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-lg">
-        <CardHeader>
-          <CardTitle>Create an account</CardTitle>
+    <div className="min-h-screen bg-gradient-to-r from-orange-50 to-yellow-50 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md shadow-xl border border-orange-200">
+        <CardHeader className="bg-orange-50">
+          <CardTitle className="text-3xl font-bold text-orange-800 flex items-center gap-2">
+            <span>Foodhunt</span>
+            <span className="text-2xl">🚀</span>
+          </CardTitle>
+          <p className="text-sm text-orange-600">Start your food discovery journey</p>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
+            {customerErrors.general && (
+              <div className="bg-red-50 border border-red-300 text-red-800 px-4 py-3 rounded relative" role="alert">
+                {customerErrors.general}
+              </div>
+            )}
+            {restaurantErrors.general && (
+              <div className="bg-red-50 border border-red-300 text-red-800 px-4 py-3 rounded relative" role="alert">
+                {restaurantErrors.general}
+              </div>
+            )}
+
             {!role && (
               <RadioGroup
                 onValueChange={(value) => {
@@ -257,11 +289,11 @@ export default function Register() {
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="customer" id="customer" />
-                  <Label htmlFor="customer">Customer</Label>
+                  <Label htmlFor="customer" className="text-orange-800">Customer</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="restaurant" id="restaurant" />
-                  <Label htmlFor="restaurant">Restaurant</Label>
+                  <Label htmlFor="restaurant" className="text-orange-800">Restaurant</Label>
                 </div>
               </RadioGroup>
             )}
@@ -269,7 +301,7 @@ export default function Register() {
             {role && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold capitalize">
+                  <h2 className="text-lg font-semibold capitalize text-orange-800">
                     {role} Registration
                   </h2>
                   <Button
@@ -290,7 +322,8 @@ export default function Register() {
                         name: '',
                         email: '',
                         password: '',
-                        confirmPassword: ''
+                        confirmPassword: '',
+                        general: ''
                       });
 
                       // Reset restaurant form
@@ -312,7 +345,8 @@ export default function Register() {
                         confirmPassword: '',
                         panNumber: '',
                         registrationCertificate: '',
-                        panImage: ''
+                        panImage: '',
+                        general: ''
                       });
                     }}
                   >
@@ -323,58 +357,66 @@ export default function Register() {
                 {role === 'customer' && (
                   <>
                     <div className="space-y-2">
-                      <Label htmlFor="name">Name</Label>
+                      <Label htmlFor="name" className="text-orange-800">Full Name</Label>
                       <Input
                         id="name"
+                        type="text"
                         name="name"
-                        placeholder="Enter your name"
                         value={customerName}
                         onChange={(e) => {
                           setCustomerName(e.target.value);
                           setCustomerErrors(prev => ({ ...prev, name: '' }));
                         }}
+                        placeholder="Enter your full name"
+                        disabled={loading}
+                        className="border-orange-200 focus:border-orange-500"
                       />
                       <ErrorMessage message={customerErrors.name} />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
+                      <Label htmlFor="email" className="text-orange-800">Email Address</Label>
                       <Input
                         id="email"
-                        name="email"
                         type="email"
-                        placeholder="Enter your email"
+                        name="email"
                         value={customerEmail}
                         onChange={(e) => {
                           setCustomerEmail(e.target.value);
                           setCustomerErrors(prev => ({ ...prev, email: '' }));
                         }}
+                        placeholder="Enter your email"
+                        disabled={loading}
+                        className="border-orange-200 focus:border-orange-500"
                       />
                       <ErrorMessage message={customerErrors.email} />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="password">Password</Label>
+                      <Label htmlFor="password" className="text-orange-800">Password</Label>
                       <div className="relative">
                         <Input
                           id="password"
                           type={showCustomerPassword ? 'text' : 'password'}
-                          placeholder="Enter your password"
+                          name="password"
                           value={customerPassword}
                           onChange={(e) => {
                             setCustomerPassword(e.target.value);
                             setCustomerErrors(prev => ({ ...prev, password: '' }));
                           }}
+                          placeholder="Enter your password"
+                          className="border-orange-200 focus:border-orange-500 pr-10"
+                          disabled={loading}
                         />
                         <button
                           type="button"
                           onClick={() => setShowCustomerPassword(!showCustomerPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-orange-500 hover:text-orange-700"
                         >
                           {showCustomerPassword ? (
-                            <EyeOff className="h-4 w-4 text-gray-500" />
+                            <EyeOff className="h-4 w-4" />
                           ) : (
-                            <Eye className="h-4 w-4 text-gray-500" />
+                            <Eye className="h-4 w-4" />
                           )}
                         </button>
                       </div>
@@ -382,35 +424,42 @@ export default function Register() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="confirmPassword">Confirm Password</Label>
+                      <Label htmlFor="confirmPassword" className="text-orange-800">Confirm Password</Label>
                       <div className="relative">
                         <Input
                           id="confirmPassword"
                           type={showCustomerConfirmPassword ? 'text' : 'password'}
-                          placeholder="Confirm your password"
+                          name="confirmPassword"
                           value={confirmPassword}
                           onChange={(e) => {
                             setConfirmPassword(e.target.value);
                             setCustomerErrors(prev => ({ ...prev, confirmPassword: '' }));
                           }}
+                          placeholder="Confirm your password"
+                          className="border-orange-200 focus:border-orange-500 pr-10"
+                          disabled={loading}
                         />
                         <button
                           type="button"
                           onClick={() => setShowCustomerConfirmPassword(!showCustomerConfirmPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-orange-500 hover:text-orange-700"
                         >
                           {showCustomerConfirmPassword ? (
-                            <EyeOff className="h-4 w-4 text-gray-500" />
+                            <EyeOff className="h-4 w-4" />
                           ) : (
-                            <Eye className="h-4 w-4 text-gray-500" />
+                            <Eye className="h-4 w-4" />
                           )}
                         </button>
                       </div>
                       <ErrorMessage message={customerErrors.confirmPassword} />
                     </div>
 
-                    <Button type="submit" className="w-full">
-                      Create Customer Account
+                    <Button
+                      type="submit"
+                      className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+                      disabled={loading}
+                    >
+                      {loading ? 'Creating account...' : 'Sign Up'}
                     </Button>
                   </>
                 )}
@@ -420,7 +469,7 @@ export default function Register() {
                     {step === 1 && (
                       <>
                         <div className="space-y-2">
-                          <Label htmlFor="restaurantName">Restaurant Name</Label>
+                          <Label htmlFor="restaurantName" className="text-orange-800">Restaurant Name</Label>
                           <Input
                             id="restaurantName"
                             name="restaurantName"
@@ -430,12 +479,14 @@ export default function Register() {
                               setRestaurantName(e.target.value);
                               setRestaurantErrors(prev => ({ ...prev, name: '' }));
                             }}
+                            className="border-orange-200 focus:border-orange-500"
+                            disabled={loading}
                           />
                           <ErrorMessage message={restaurantErrors.name} />
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="restaurantEmail">Business Email</Label>
+                          <Label htmlFor="restaurantEmail" className="text-orange-800">Business Email</Label>
                           <Input
                             id="restaurantEmail"
                             name="restaurantEmail"
@@ -446,12 +497,14 @@ export default function Register() {
                               setRestaurantEmail(e.target.value);
                               setRestaurantErrors(prev => ({ ...prev, email: '' }));
                             }}
+                            className="border-orange-200 focus:border-orange-500"
+                            disabled={loading}
                           />
                           <ErrorMessage message={restaurantErrors.email} />
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="phone">Phone Number</Label>
+                          <Label htmlFor="phone" className="text-orange-800">Phone Number</Label>
                           <Input
                             id="phone"
                             name='restaurantPhone'
@@ -461,12 +514,14 @@ export default function Register() {
                               setRestaurantPhone(e.target.value);
                               setRestaurantErrors(prev => ({ ...prev, phone: '' }));
                             }}
+                            className="border-orange-200 focus:border-orange-500"
+                            disabled={loading}
                           />
                           <ErrorMessage message={restaurantErrors.phone} />
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="address">Restaurant Address</Label>
+                          <Label htmlFor="address" className="text-orange-800">Restaurant Address</Label>
                           <Input
                             id="address"
                             name="restaurantAddress"
@@ -476,12 +531,14 @@ export default function Register() {
                               setRestaurantAddress(e.target.value);
                               setRestaurantErrors(prev => ({ ...prev, address: '' }));
                             }}
+                            className="border-orange-200 focus:border-orange-500"
+                            disabled={loading}
                           />
                           <ErrorMessage message={restaurantErrors.address} />
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="restaurantPassword">Password</Label>
+                          <Label htmlFor="restaurantPassword" className="text-orange-800">Password</Label>
                           <div className="relative">
                             <Input
                               id="restaurantPassword"
@@ -493,16 +550,18 @@ export default function Register() {
                                 setRestaurantPassword(e.target.value);
                                 setRestaurantErrors(prev => ({ ...prev, password: '' }));
                               }}
+                              className="border-orange-200 focus:border-orange-500 pr-10"
+                              disabled={loading}
                             />
                             <button
                               type="button"
                               onClick={() => setShowRestaurantPassword(!showRestaurantPassword)}
-                              className="absolute right-3 top-1/2 -translate-y-1/2"
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-orange-500 hover:text-orange-700"
                             >
                               {showRestaurantPassword ? (
-                                <EyeOff className="h-4 w-4 text-gray-500" />
+                                <EyeOff className="h-4 w-4" />
                               ) : (
-                                <Eye className="h-4 w-4 text-gray-500" />
+                                <Eye className="h-4 w-4" />
                               )}
                             </button>
                           </div>
@@ -510,7 +569,7 @@ export default function Register() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="restaurantConfirmPassword">Confirm Password</Label>
+                          <Label htmlFor="restaurantConfirmPassword" className="text-orange-800">Confirm Password</Label>
                           <div className="relative">
                             <Input
                               id="restaurantConfirmPassword"
@@ -522,16 +581,18 @@ export default function Register() {
                                 setRestaurantConfirmPassword(e.target.value);
                                 setRestaurantErrors(prev => ({ ...prev, confirmPassword: '' }));
                               }}
+                              className="border-orange-200 focus:border-orange-500 pr-10"
+                              disabled={loading}
                             />
                             <button
                               type="button"
                               onClick={() => setShowRestaurantConfirmPassword(!showRestaurantConfirmPassword)}
-                              className="absolute right-3 top-1/2 -translate-y-1/2"
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-orange-500 hover:text-orange-700"
                             >
                               {showRestaurantConfirmPassword ? (
-                                <EyeOff className="h-4 w-4 text-gray-500" />
+                                <EyeOff className="h-4 w-4" />
                               ) : (
-                                <Eye className="h-4 w-4 text-gray-500" />
+                                <Eye className="h-4 w-4" />
                               )}
                             </button>
                           </div>
@@ -540,7 +601,7 @@ export default function Register() {
 
                         <Button
                           type="button"
-                          className="w-full"
+                          className="w-full bg-orange-600 hover:bg-orange-700 text-white"
                           onClick={() => {
                             const isValid = !!(restaurantName.trim() &&
                               restaurantEmail.trim() &&
@@ -552,6 +613,7 @@ export default function Register() {
                               validateRestaurantForm();
                             }
                           }}
+                          disabled={loading}
                         >
                           Next
                         </Button>
@@ -561,7 +623,7 @@ export default function Register() {
                     {step === 2 && (
                       <>
                         <div className="space-y-2">
-                          <Label htmlFor="panNumber">PAN Number</Label>
+                          <Label htmlFor="panNumber" className="text-orange-800">PAN Number</Label>
                           <Input
                             id="panNumber"
                             name="panNumber"
@@ -571,12 +633,14 @@ export default function Register() {
                               setPanNumber(e.target.value);
                               setRestaurantErrors(prev => ({ ...prev, panNumber: '' }));
                             }}
+                            className="border-orange-200 focus:border-orange-500"
+                            disabled={loading}
                           />
                           <ErrorMessage message={restaurantErrors.panNumber} />
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="registrationCertificate">Registration Certificate</Label>
+                          <Label htmlFor="registrationCertificate" className="text-orange-800">Registration Certificate</Label>
                           <Input
                             id="registrationCertificate"
                             name="registrationCertificate"
@@ -589,12 +653,13 @@ export default function Register() {
                                 setRestaurantErrors(prev => ({ ...prev, registrationCertificate: '' }));
                               }
                             }}
+                            disabled={loading}
                           />
                           <ErrorMessage message={restaurantErrors.registrationCertificate} />
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="panImage">PAN Card Image</Label>
+                          <Label htmlFor="panImage" className="text-orange-800">PAN Card Image</Label>
                           <Input
                             id="panImage"
                             name="panImage"
@@ -607,15 +672,18 @@ export default function Register() {
                                 setRestaurantErrors(prev => ({ ...prev, panImage: '' }));
                               }
                             }}
+                            disabled={loading}
                           />
                           <ErrorMessage message={restaurantErrors.panImage} />
                         </div>
 
                         <div className="flex space-x-2">
-                          <Button type="button" variant="outline" onClick={() => setStep(1)}>
+                          <Button type="button" variant="outline" onClick={() => setStep(1)} disabled={loading}>
                             Back
                           </Button>
-                          <Button type="submit">Register</Button>
+                          <Button type="submit" className="w-full bg-orange-600 hover:bg-orange-700 text-white" disabled={loading}>
+                            {loading ? 'Creating account...' : 'Sign Up'}
+                          </Button>
                         </div>
                       </>
                     )}
@@ -624,15 +692,15 @@ export default function Register() {
               </div>
             )}
           </form>
-          <div className="mt-4 text-center">
-            <p className="text-sm text-gray-600">
-              Already have an account?{' '}
+          <div className="text-center mt-4">
+            <p className="text-sm text-orange-600">
+              Already have an account? {' '}
               <Button
                 variant="link"
-                className="p-0 text-primary hover:text-primary/80"
+                className="p-0 text-orange-800 font-medium hover:underline"
                 onClick={() => router.push('/auth/login')}
               >
-                Login
+                Login now
               </Button>
             </p>
           </div>

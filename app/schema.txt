@@ -21,15 +21,6 @@ CREATE TABLE restaurants (
 );
 
 
-Database_Host=localhost
-Database_User="root"
-Database_Password=
-Database_Name=food_recommender_system
-DB_PORT=3306
-PORT=3000
-
-NEXT_PUBLIC_JWT_SECRET_KEY = f5KvflLN6z
-
 
 CREATE TABLE cuisines (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -73,6 +64,43 @@ CREATE TABLE user_interactions (
     FOREIGN KEY (menuItemId) REFERENCES menu_items(id) ON DELETE CASCADE,
     UNIQUE KEY unique_user_menu (userId, menuItemId)
 );
+
+CREATE TABLE user_preferences (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    userId INT NOT NULL,
+    preferredCuisineId INT,
+    preferredCategoryId INT,
+    spicyPreference TINYINT, -- Assuming a scale (e.g., 0 to 5)
+    vegPreference BOOLEAN,
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (userId) REFERENCES users(id),
+    FOREIGN KEY (preferredCuisineId) REFERENCES cuisines(id),
+    FOREIGN KEY (preferredCategoryId) REFERENCES categories(id)
+);
+
+CREATE TABLE user_ratings (
+    rating_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    menu_id INT,
+    rating FLOAT CHECK (rating >= 1 AND rating <= 5),
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id), -- Assuming you have a Users table
+    FOREIGN KEY (menu_id) REFERENCES menu_items(id) -- Assuming you have a MenuItems table
+);
+
+
+
+
+
+Database_Host=localhost
+Database_User="root"
+Database_Password=
+Database_Name=food_recommender_system
+DB_PORT=3306
+PORT=3000
+
+NEXT_PUBLIC_JWT_SECRET_KEY = f5KvflLN6z
 
 INSERT INTO cuisines (name)
 VALUES 

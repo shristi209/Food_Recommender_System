@@ -1,6 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDbPool } from '@/lib/database';
 import { getRestaurantFromRequest } from '@/lib/restaurant';
+import { RowDataPacket, OkPacket } from 'mysql2';
+
+interface RestaurantDetailsRow extends RowDataPacket {
+  id: string;
+  restaurantName: string;
+  address: string;
+  phone: string;
+}
+
+interface MenuItemRow extends RowDataPacket {
+  menuItemId: number;
+  menuItemName: string;
+  price: number;
+  picture: string | null;
+  spicyLevel: number;
+  isVeg: number;
+  ingredients: string | null;
+  cuisineName: string | null;
+  categoryName: string | null;
+}
 
 // Get menu items for the current restaurant
 export async function GET(request: NextRequest) {
@@ -10,7 +30,7 @@ export async function GET(request: NextRequest) {
     const restaurant = await getRestaurantFromRequest(request);
     
     // Get restaurant details
-    const [restaurantDetails] = await pool.execute(
+    const [restaurantDetails] = await pool.execute<RestaurantDetailsRow[]>(
       `SELECT id, restaurantName, address, phone
        FROM restaurants 
        WHERE id = ?`,
@@ -18,7 +38,7 @@ export async function GET(request: NextRequest) {
     );
 
     // Get menu items for this restaurant with cuisine and category details
-    const [menuResults] = await pool.execute(
+    const [menuResults] = await pool.execute<MenuItemRow[]>(
       `SELECT 
         m.id as menuItemId,
         m.name as menuItemName,
@@ -37,19 +57,19 @@ export async function GET(request: NextRequest) {
       [restaurant.id]
     );
     
-    const restaurants = restaurantDetails as any[];
-    if (restaurants.length === 0) {
+    if (restaurantDetails.length === 0) {
       return NextResponse.json(
         { error: 'Restaurant not found' },
         { status: 404 }
       );
     }
 
+    const restaurant_details = restaurantDetails[0];
     return NextResponse.json({
-      id: restaurants[0].id,
-      restaurantName: restaurants[0].restaurantName,
-      address: restaurants[0].address,
-      phone: restaurants[0].phone,
+      id: restaurant_details.id,
+      restaurantName: restaurant_details.restaurantName,
+      address: restaurant_details.address,
+      phone: restaurant_details.phone,
       menuItems: menuResults
     });
     
@@ -84,7 +104,7 @@ export async function POST(request: NextRequest) {
     } = await request.json();
     
     // Insert new menu item
-    const [result] = await pool.execute(
+    const [result] = await pool.execute<OkPacket>(
       `INSERT INTO menu_items (
         restaurantId, name, price, cuisineId, categoryId,
         spicyLevel, isVeg, ingredients, picture
@@ -95,7 +115,7 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json({ 
       message: 'Menu item added successfully',
-      id: (result as any).insertId
+      id: result.insertId
     }, { status: 201 });
     
   } catch (error) {

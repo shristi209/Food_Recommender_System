@@ -187,7 +187,7 @@ export default function ViewMenu() {
                   <TableCell>{item.categoryName}</TableCell>
                   <TableCell>{item.cuisineName}</TableCell>
                   <TableCell>
-                    <Badge variant={item.isVeg ? 'success' : 'destructive'}>
+                    <Badge variant={item.isVeg ? 'default' : 'destructive'}>
                       {item.isVeg ? 'Veg' : 'Non-veg'}
                     </Badge>
                   </TableCell>

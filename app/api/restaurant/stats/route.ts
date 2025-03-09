@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDbPool } from '@/lib/database';
 import { getRestaurantFromRequest } from '@/lib/restaurant';
+import { RowDataPacket } from 'mysql2';
+
+interface TrackingUsersRow extends RowDataPacket {
+  count: number;
+}
+
+interface InteractionStatsRow extends RowDataPacket {
+  userCount: number;
+  cartAdds: number;
+}
 
 // Get statistics for the current restaurant
 export async function GET(request: NextRequest) {
@@ -18,7 +28,7 @@ export async function GET(request: NextRequest) {
     yesterday.setDate(yesterday.getDate() - 1);
     
     // Get statistics
-    const [trackingUsersResult] = await pool.execute(
+    const [trackingUsersResult] = await pool.execute<TrackingUsersRow[]>(
       `SELECT COUNT(DISTINCT userId) as count 
        FROM user_interactions ui
        JOIN menu_items mi ON ui.menuItemId = mi.id
@@ -27,7 +37,7 @@ export async function GET(request: NextRequest) {
       [restaurant.id]
     );
 
-    const [cartItemsResult] = await pool.execute(
+    const [cartItemsResult] = await pool.execute<TrackingUsersRow[]>(
       `SELECT COUNT(*) as count 
        FROM user_interactions ui
        JOIN menu_items mi ON ui.menuItemId = mi.id
@@ -37,7 +47,7 @@ export async function GET(request: NextRequest) {
     );
 
     // Get today's interactions
-    const [todayInteractionsResult] = await pool.execute(
+    const [todayInteractionsResult] = await pool.execute<InteractionStatsRow[]>(
       `SELECT 
          COUNT(DISTINCT ui.userId) as userCount,
          SUM(ui.cartAddCount) as cartAdds
@@ -49,7 +59,7 @@ export async function GET(request: NextRequest) {
     );
 
     // Get yesterday's interactions
-    const [yesterdayInteractionsResult] = await pool.execute(
+    const [yesterdayInteractionsResult] = await pool.execute<InteractionStatsRow[]>(
       `SELECT 
          COUNT(DISTINCT ui.userId) as userCount,
          SUM(ui.cartAddCount) as cartAdds
@@ -60,10 +70,10 @@ export async function GET(request: NextRequest) {
       [restaurant.id]
     );
 
-    const todayStats = (todayInteractionsResult as any[])[0];
-    const yesterdayStats = (yesterdayInteractionsResult as any[])[0];
-    const trackingUsers = (trackingUsersResult as any[])[0];
-    const cartItems = (cartItemsResult as any[])[0];
+    const todayStats = todayInteractionsResult[0];
+    const yesterdayStats = yesterdayInteractionsResult[0];
+    const trackingUsers = trackingUsersResult[0];
+    const cartItems = cartItemsResult[0];
 
     // Calculate percentage changes
     const userChange = yesterdayStats.userCount > 0 

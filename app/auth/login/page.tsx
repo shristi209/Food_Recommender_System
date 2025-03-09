@@ -159,95 +159,111 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-center">Login to Your Account</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {errors.general && (
-              <div className="bg-red-50 border border-red-300 text-red-800 px-4 py-3 rounded relative" role="alert">
-                {errors.general}
-              </div>
-            )}
+    <div className="min-h-screen bg-gradient-to-r from-orange-50 to-yellow-50 flex items-center justify-center p-4">
+    <Card className="w-full max-w-md shadow-xl border border-orange-200">
+      <CardHeader className="bg-orange-50">
+        <CardTitle className="text-3xl font-bold text-orange-800 flex items-center gap-2">
+          <span>Foodhunt</span>
+          <span className="text-2xl">🚀</span>
+        </CardTitle>
+        <p className="text-sm text-orange-600">Welcome back to your food discovery journey</p>
+      </CardHeader>
+      <CardContent className="p-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {errors.general && (
+            <div className="bg-red-50 border border-red-300 text-red-800 px-4 py-3 rounded relative" role="alert">
+              {errors.general}
+            </div>
+          )}
 
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input 
-                  id="email" 
-                  type="email" 
-                  name="email" 
-                  value={email} 
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    setErrors(prev => ({ ...prev, email: '' }));
-                  }}
-                  placeholder="Enter your email" 
-                  disabled={loading}
-                />
-                {errors.email && (
-                  <p className="text-red-500 text-sm mt-1">{errors.email}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <div className="relative">
-                  <Input 
-                    id="password" 
-                    type={showPassword ? 'text' : 'password'} 
-                    name="password" 
-                    value={password} 
-                    onChange={(e) => {
-                      setPassword(e.target.value);
-                      setErrors(prev => ({ ...prev, password: '' }));
-                    }}
-                    placeholder="Enter your password" 
-                    className={`${errors.password ? 'border-red-500' : ''} pr-10`}
-                    disabled={loading}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
-                {errors.password && (
-                  <p className="text-red-500 text-sm mt-1">{errors.password}</p>
-                )}
-              </div>
-
-              <Button 
-                type="submit" 
-                className="w-full" 
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-orange-800">Email Address</Label>
+              <Input 
+                id="email" 
+                type="email" 
+                name="email" 
+                value={email} 
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setErrors(prev => ({ ...prev, email: '' }));
+                }}
+                placeholder="Enter your email" 
                 disabled={loading}
-              >
-                {loading ? 'Logging in...' : 'Login'}
-              </Button>
+                className="border-orange-200 focus:border-orange-500"
+              />
+              {errors.email && (
+                <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+              )}
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-orange-800">Password</Label>
+              <div className="relative">
+                <Input 
+                  id="password" 
+                  type={showPassword ? 'text' : 'password'} 
+                  name="password" 
+                  value={password} 
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setErrors(prev => ({ ...prev, password: '' }));
+                  }}
+                  placeholder="Enter your password" 
+                  className="border-orange-200 focus:border-orange-500 pr-10"
+                  disabled={loading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-orange-500 hover:text-orange-700"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+              {errors.password && (
+                <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+              )}
+            </div>
+
+            <Button 
+              type="submit" 
+              className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+              disabled={loading}
+            >
+              {loading ? 'Logging in...' : 'Login'}
+            </Button>
+
             <div className="text-center mt-4">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-orange-600">
                 Don't have an account? {' '}
                 <Link 
                   href="/auth/register" 
-                  className="text-primary hover:underline"
+                  className="text-orange-800 font-medium hover:underline"
                 >
-                  Register
+                  Register now
                 </Link>
               </p>
             </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+
+            {/* <div className="text-center mt-2">
+              <p className="text-sm text-orange-600">
+                <Link 
+                  href="/forgot-password" 
+                  className="text-orange-800 font-medium hover:underline"
+                >
+                  Forgot your password?
+                </Link>
+              </p>
+            </div> */}
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  </div>
   );
 }
